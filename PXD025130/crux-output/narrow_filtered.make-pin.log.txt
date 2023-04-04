@@ -1,0 +1,13 @@
+INFO: CPU: AY3NPWH1QXJ
+INFO: Crux version: 4.1-4ff75ee-2022-09-28
+INFO: Mon  3 Apr 2023 12:47:21 AEST
+COMMAND LINE: crux make-pin --overwrite T --fileroot narrow_filtered narrow.filtered.txt
+INFO: Beginning make-pin.
+INFO: Parsing narrow.filtered.txt
+INFO: Assigning index 0 to Q26431_MS20-025_Virus-purif_1.mgf.
+WARNING: Matches/spectrum column not found ('distinct matches/spectrum' or 'total matches/spectrum')
+INFO: There are 17610 target matches and 6368 decoys
+INFO: Maximum observed charge is 3.
+INFO: Elapsed time: 0.85 s
+INFO: Finished crux make-pin.
+INFO: Return Code:0
