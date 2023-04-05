@@ -10,8 +10,12 @@ This module performs the percolator algorithm with strict FDR control
 
 import numpy as np
 import pandas as pd
+from sklearn import svm
+from sklearn.model_selection import cross_validate
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import GridSearchCV
 
-
+#########################################################################################################
 def TDC_flex_c(decoy_wins, target_wins, BC1 = 1, c = 1/2, lam = 1/2):
     '''
     Parameters
@@ -37,9 +41,8 @@ def TDC_flex_c(decoy_wins, target_wins, BC1 = 1, c = 1/2, lam = 1/2):
     fdps = np.minimum(1, ((BC1 + nDD)/ nTD) * (c / (1-lam)))
     qvals = fdps[::-1].cummin()[::-1]
     return(qvals)
-
-
-def peptide_level(narrow_file, open_file, peptide_list, score = 'TailorScore'):
+#########################################################################################################
+def peptide_level(narrow_file, open_file, peptide_list, score = 'TailorScore', precursor_bin_width = 1.0005079/4):
     '''
     Parameters
     ----------
@@ -48,13 +51,13 @@ def peptide_level(narrow_file, open_file, peptide_list, score = 'TailorScore'):
     open_file : string
         path to filtered open pin file.
     peptide_list : string
-        DESCRIPTION.
-    score : TYPE, optional
-        DESCRIPTION. The default is 'TailorScore'.
+        path to target decoy pairing.
+    score : string, optional
+        Score function for initial direction. The default is 'TailorScore'.
 
     Returns
     -------
-    None.
+    .
 
     '''
     narrow_df = pd.read_table(narrow_file) #reading
@@ -86,5 +89,66 @@ def peptide_level(narrow_file, open_file, peptide_list, score = 'TailorScore'):
     df_all.pop('original_target')
     df_all.pop('enzInt')
     
+    delta_mass_max = max(abs(df_all.ExpMass - df_all.CalcMass)) #binning delta masses
+    breaks_p = np.arange(0, delta_mass_max + 2*precursor_bin_width, precursor_bin_width) - precursor_bin_width/2
+    breaks_n = list(reversed(-breaks_p))
+    breaks = pd.Series(breaks_n[0:(len(breaks_n) - 1)] + list(breaks_p), name = 'bins')
+    digitized = np.digitize(df_all.ExpMass - df_all.CalcMass, breaks)
+    df_all['bins'] = digitized
+   
+    bin_freq = df_all['bins'].value_counts() #getting bin frequencies
+    bin_freq.columns = ['bin', 'freq']
+    df_all = df_all.merge(bin_freq, how = 'left')
+    
     return(df_all)
+#########################################################################################################
+def train_cv(labels, df, folds = 3, Cs = [0.1, 1, 10], kernel = 'linear', degree = 2, alpha = 0.01):
+    '''
+    Parameters
+    ----------
+    labels : panda series
+        indicating the target-decoy wins.
+    df : panda dataframe
+        features to be trained on.
+    folds : integer
+        number of folds for k-fold cross-validation.
+    Cs : list, optional
+        the class_weights for SVM. The default is [0.1, 1, 10].
+    kernel : string, optional
+        the type of SVM kernel. The default is 'linear'.
+    degree : integer, optional
+        the degree used if polynomial is specified. The default is NULL.
+    alpha : float, optional
+        FDR threshold. The default is 0.01.
 
+    Returns
+    -------
+    The optimal choice of parameters based off k-fold cross-validation.
+
+    '''
+    
+    class_weight = [{-1: C_neg, 1: C_pos} for C_neg in Cs for C_pos in Cs if C_neg >= C_pos]
+    gamma_range = np.logspace(-9, 3, 10)
+    coef0_range = np.logspace(-9, 3, 10)
+    
+    param_grid = dict(gamma=gamma_range, coef0=coef0_range, class_weight = class_weight)
+    
+    cv = StratifiedShuffleSplit(n_splits=3, random_state=0)
+
+    grid = GridSearchCV(svm.SVC(), param_grid=param_grid, cv=cv, scoring = 'add scoring here')
+
+
+    
+    for j in range(len(Cs)):
+        for i in range(j, len(Cs)):
+            C_neg, C_pos = Cs[i], Cs[j]
+            
+            
+            if kernel in ['linear', 'sigmoid']:
+                coef0s = [0, 0.5, 1]
+                gamma = [1 / (df.shape[1]]
+    
+            clf = svm.SVC(kernel=kernel, class_weight = class_weight)
+    
+    
+    return(results)    
