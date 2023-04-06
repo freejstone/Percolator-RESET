@@ -145,13 +145,9 @@ def train_cv(labels, df, folds = 3, Cs = [0.1, 1, 10], kernel = 'linear', degree
 
     grid.fit(df, labels)
     
-    pos = np.argmax(grid.cv_results_['mean_test_score'])
-    
-    selected_params = grid.cv_results_['params'][pos]
-    
-    return(selected_params)    
+    return(grid)    
 #########################################################################################################
-def do_iterative_svm_cv(df_all, folds = 3, score = 'TailorScore', Cs = c(0.1, 1, 10), total_iter = 10, kernel = 'linear', alpha = 0.01, train_alpha = 0.01, degree = None)
+def do_iterative_svm_cv(df_all, folds = 3, score = 'TailorScore', Cs = c(0.1, 1, 10), total_iter = 10, kernel = 'linear', alpha = 0.01, train_alpha = 0.01, degree = None):
     #create train dataframe
     train_decoy_indxs = random.choices([True, False], k = sum(df_all['Label'] == -1))
     train_decoys = df_all[df_all['Label'] == -1].copy()
@@ -162,7 +158,7 @@ def do_iterative_svm_cv(df_all, folds = 3, score = 'TailorScore', Cs = c(0.1, 1,
     
     train_df = pd.concat([train_decoys, train_targets]).reset_index(drop = True)
     train_df.sample(frac = 1)
-    train_df = train_df.sort_values(by = score, ascending = False)
+    train_df = train_df.sort_values(by = score, ascending = False).reset_index(drop = True)
     
     #real df
     real_df = df_all[~(df_all.index.isin(train_decoys.index))].copy()
@@ -179,13 +175,63 @@ def do_iterative_svm_cv(df_all, folds = 3, score = 'TailorScore', Cs = c(0.1, 1,
     SVM_train_features.loc[:,~(SVM_train_features.columns.isin(["Charge1", "Charge2", "Charge3", "Charge4", "Charge5", "enzN", "enzC", "rank", "n_o"]))] = scale.fit_transform(SVM_train_features.loc[:,~(SVM_train_features.columns.isin(["Charge1", "Charge2", "Charge3", "Charge4", "Charge5", "enzN", "enzC", "rank", "n_o"]))])
     
     #getting initial positive and negative set
-    q_vals = TDC_flex_c(SVM_train_labels == -1, SVM_train_labels == 1, c = 3/4, lam = 3/4)
+    q_vals = uf.TDC_flex_c(SVM_train_labels == -1, SVM_train_labels == 1, c = 3/4, lam = 3/4)
     positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= alpha)
     negative_set_indxs = (SVM_train_labels == -1)
         
-    SVM_train_features_iter = SVM_train_features[positive_set_indxs | negative_set_indxs, ]
-    SVM_train_labels_iter = SVM_train_labels[positive_set_indxs | negative_set_indxs]
+    SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].copy()
+    SVM_train_labels_iter = SVM_train_labels.loc[positive_set_indxs | negative_set_indxs].copy()
     
+    train_power, true_power = [0]*total_iter, [0]*total_iter
+    
+    for iter in range(total_iter):
+        #determining best direction with cross validation for parameter selection
+        grid = train_cv(SVM_train_labels_iter, SVM_train_features_iter, folds = folds, Cs = Cs, kernel = kernel, degree = degree, alpha = alpha)
+        best_train_power = max(grid.cv_results_['mean_test_score'])
+        train_power[iter] = best_train_power
+        
+        #the new direction
+        new_scores = grid.decision_function(SVM_train_features)
+        
+        new_idx = pd.Series(new_scores).sort_values(ascending = False).index
+        
+        SVM_train_features = SVM_train_features.loc[new_idx].reset_index(drop = True)
+        
+        SVM_train_labels = SVM_train_labels.loc[new_idx].reset_index(drop = True)
+        
+        #determine the new positive and negative set
+        q_vals = uf.TDC_flex_c(SVM_train_labels == -1, SVM_train_labels == 1, c = 3/4, lam = 3/4)
+        
+        positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= alpha)
+        
+        negative_set_indxs = (SVM_train_labels == -1)
+        
+        SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].copy()
+        SVM_train_labels_iter = SVM_train_labels.loc[positive_set_indxs | negative_set_indxs].copy()
+        
+        #get actual power if we were to stop here
+        real_labels = real_df['Label'].copy()
+        real_df_test = real_df.drop(['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'],axis = 1).copy()
+        sds = real_df_test.apply(np.std, axis = 0)
+        real_df_test = real_df_test.loc[:, abs(sds) > 1e-10]
+        
+        #scale non-binary features
+        scale = StandardScaler()
+        real_df_test.loc[:,~(real_df_test.columns.isin(["Charge1", "Charge2", "Charge3", "Charge4", "Charge5", "enzN", "enzC", "rank", "n_o"]))] = scale.fit_transform(real_df_test.loc[:,~(real_df_test.columns.isin(["Charge1", "Charge2", "Charge3", "Charge4", "Charge5", "enzN", "enzC", "rank", "n_o"]))])
+        
+        #the new direction
+        new_scores = grid.decision_function(real_df_test)
+        new_idx = pd.Series(new_scores).sort_values(ascending = False).index
+        new_labels = real_labels.loc[new_idx].reset_index(drop = True)
+        
+        q_val = uf.TDC_flex_c(new_labels == -1, new_labels == 1, c = 2/3, lam = 2/3)
+        power_final = sum((q_val <= alpha) & (new_labels == 1))
+        true_power[iter] = power_final
+        
+    return(train_power, true_power)
+        
+        
+df_all = peptide_level(narrow_file, open_file, peptide_list)
     
 df = df_all.copy()
 labels = df_all.Label.copy()
