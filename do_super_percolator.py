@@ -9,19 +9,13 @@ This module performs the percolator algorithm with strict FDR control
 """
 import os 
 import time
-import datetime
-import platform
 import sys
 import numpy as np
 import pandas as pd
 import random
 import logging
 import utility_functions as uf
-import super_percoaltor_functions as spf
-from sklearn import svm
-from sklearn.metrics import make_scorer
-from sklearn.model_selection import GridSearchCV
-from sklearn.preprocessing import StandardScaler
+import super_percolator_functions as spf
 
 USAGE = """USAGE: python3 -m CONGA [options] <narrow> <wide> <matching>
 
@@ -200,12 +194,10 @@ def main():
     precursor_bin_width = 1.0005079/4
     neighbour_remove = True
     thresh = 0.05
-    correction = 1
     n_processes = 1
     output_dir = '.'
     file_root = 'super_percolator'
     static_mods = {'C':57.02146}
-    dcy_prefix = 'decoy_'
     overwrite = False
     seed = None    
     command_line = ' '.join(sys.argv)
@@ -267,9 +259,6 @@ def main():
         elif (next_arg == "--static_mods"):
             static_mods = uf.parse_static_mods(sys.argv[0])
             sys.argv = sys.argv[1:]
-        elif (next_arg == "--dcy_prefix"):
-            dcy_prefix = str(sys.argv[0])
-            sys.argv = sys.argv[1:]
         elif (next_arg == "--overwrite"):
             if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
                 overwrite = True
@@ -310,21 +299,29 @@ def main():
     peptide_list_df = pd.read_table(td_list) #reading
     
     #doing filtering
-    df_all = uf.filter_narrow_open(narrow_df, open_df, thresh, n_processes, neighbour_remove, tide_used = 'tide', static_mods = {'C':57.02146})
+    df_all = uf.filter_narrow_open(narrow_df, open_df, thresh, n_processes, neighbour_remove, tide_used = 'tide', static_mods = static_mods)
     
     
     #doing peptide level competition
     df_all = spf.peptide_level(df_all, peptide_list_df, precursor_bin_width = precursor_bin_width)
     
-    results = spf.do_iterative_svm_cv(df_all, folds = folds, Cs = [0.1, 1, 10], total_iter = 10, kernel = 'linear', alpha = 0.01, train_alpha = 0.01, degree = None)
+    train_power, true_power, discoveries = spf.do_iterative_svm_cv(df_all, folds = folds, Cs = [0.1, 1, 10], total_iter = total_iter, kernel = kernel, alpha = FDR_threshold, train_alpha = train_FDR_threshold, degree = degree)
+    power = pd.DataFrame([train_power, true_power], columns = ['train_power', 'true_power'])
     
     #write results
     if output_dir != './':
-        if os.path.isdir(output_dir):
-            results.to_csv(output_dir + "/" + file_root + ".peptides.txt", header=True, index = False, sep = '\t')
-        else:
+        if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-            results.to_csv(output_dir + "/" + file_root + ".peptides.txt", header=True, index = False, sep = '\t')
-    else:
-        results.to_csv(output_dir + "/" + file_root + ".peptides.txt", header=True, index = False, sep = '\t')
+        discoveries.to_csv(output_dir + "/" + file_root + ".peptides.txt", header=True, index = False, sep = '\t')
+        power.to_csv(output_dir + "/" + file_root + ".power.txt", header=True, index = False, sep = '\t')
         
+    else:
+        discoveries.to_csv(output_dir + "/" + file_root + ".peptides.txt", header=True, index = False, sep = '\t')
+    
+    end_time = time.time()
+    
+    logging.info("Elapsed time: " + str(round(end_time - start_time, 2)) + " s")
+    sys.stderr.write("Elapsed time: " + str(round(end_time - start_time, 2)) + " s \n")
+    
+if __name__ == "__main__":
+    main()    

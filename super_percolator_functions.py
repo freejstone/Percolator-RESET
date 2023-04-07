@@ -7,11 +7,6 @@ Created on Thu Apr  6 23:47:06 2023
 
 super_percolator main functions
 """
-import os 
-import time
-import datetime
-import platform
-import sys
 import numpy as np
 import pandas as pd
 import random
@@ -238,7 +233,8 @@ def do_iterative_svm_cv(df_all, folds = 3, Cs = [0.1, 1, 10], total_iter = 10, k
         power_final = sum((q_val <= alpha) & (new_labels == 1))
         true_power[iter] = power_final
     
-    #printing
+    #using the last new_idx to report the discoveries
     real_df = real_df.loc[new_idx].reset_index(drop = True)
+    real_df_discoveries = real_df[(q_val <= alpha) & (new_labels == 1)]
         
-    return(train_power, true_power)
+    return(train_power, true_power, real_df_discoveries)
