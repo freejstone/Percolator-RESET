@@ -442,8 +442,8 @@ def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh = 0.05, 
         Combined PSMs from both narrow and open search, with neighbours
         for each scan number.
     '''
-    open_target_decoys['n_o'] = 'open'
-    narrow_target_decoys['n_o'] = 'narrow'
+    open_target_decoys['n_o'] = 0
+    narrow_target_decoys['n_o'] = 1
     
     open_target_decoys['rank'] = open_target_decoys['SpecId'].apply(lambda x: int(x[-1])) #getting the rank
     narrow_target_decoys['rank'] = narrow_target_decoys['SpecId'].apply(lambda x: int(x[-1])) #getting the rank
@@ -454,6 +454,8 @@ def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh = 0.05, 
     SpecId_split = target_decoys_all.SpecId.apply(lambda x: x.split('_')) #split SpecId
     
     target_decoys_all[['target_decoy', 'file', 'scan', 'charge', 'rank']] = pd.DataFrame(SpecId_split.tolist()) #create new columns from SpecID
+    
+    target_decoys_all['charge'] = target_decoys_all['charge'].astype(int)
     
     target_decoys_all['Peptide'] = target_decoys_all['Peptide'].apply(lambda x: x[2:(len(x) - 2)])
     
@@ -476,7 +478,7 @@ def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh = 0.05, 
     logging.info("Filtering for neighbours.")
     sys.stderr.write("Filtering for neighbours.\n")
     
-    target_decoys_all = target_decoys_all[~(target_decoys_all.Peptide.str.contains(['B', 'J', 'O', 'U', 'X', 'Z']))]
+    target_decoys_all = target_decoys_all[~(target_decoys_all.Peptide.str.contains('B|J|O|U|X|Z', regex = True))]
     target_decoys_all.reset_index(drop = True, inplace = True)
     
     if n_processes == 1:
@@ -518,6 +520,6 @@ def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh = 0.05, 
     target_decoys_all = target_decoys_all[target_decoys_all['drop_scan'] == False] #drop the neighbours
     target_decoys_all.reset_index(drop = True, inplace = True)
     
-    target_decoys_all.drop('target_decoy', 'file', 'scan', 'charge', 'drop_scan', inplace = True)
+    target_decoys_all.drop(['target_decoy', 'file', 'scan', 'charge', 'drop_scan'], axis = 1, inplace = True)
 
-    return target_decoys_all
+    return(target_decoys_all)
