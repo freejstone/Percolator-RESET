@@ -16,17 +16,19 @@ import pandas as pd
 import multiprocessing
 import logging
 import peptides
-import sys 
+import sys
 from tqdm import tqdm
 import gzip
 #########################################################################################################
+
+
 def parse_static_mods(my_string):
   """
   Parse a static mod string (see USAGE) into a dictinoary.
   Key = amino acid, value = mass offset
   """
   return_value = {}
-  
+
   for one_mod in my_string.split(","):
     words = one_mod.split(":")
     return_value[words[0]] = float(words[1])
@@ -34,52 +36,61 @@ def parse_static_mods(my_string):
   # Add in carbamidomethylation.
   if ("C" not in return_value):
     return_value["C"] = 57.02146
-  
+
   return(return_value)
 #########################################################################################################
+
+
 def print_info(command_line, output_dir, file_root, overwrite, account_mods, search_file_narrow, search_file_open):
     #check if output directory exists, if not create and store log file there.
     if os.path.isdir(output_dir):
-        if os.path.exists(path = output_dir + "/" + file_root + ".log.txt") and overwrite:
+        if os.path.exists(path=output_dir + "/" + file_root + ".log.txt") and overwrite:
             os.remove(output_dir + "/" + file_root + ".log.txt")
-            logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt", level=logging.DEBUG, format = '%(levelname)s: %(message)s')
-        elif os.path.exists(path = output_dir + "/" + file_root + ".log.txt") and not overwrite:
+            logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
+                                level=logging.DEBUG, format='%(levelname)s: %(message)s')
+        elif os.path.exists(path=output_dir + "/" + file_root + ".log.txt") and not overwrite:
             log_file = output_dir + "/" + file_root + ".log.txt"
-            sys.exit("The file %s already exists and cannot be overwritten. Use --overwrite T to replace or choose a different output file name. \n" %(log_file))
+            sys.exit("The file %s already exists and cannot be overwritten. Use --overwrite T to replace or choose a different output file name. \n" % (log_file))
         else:
-            logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt", level=logging.DEBUG, format = '%(levelname)s: %(message)s')
+            logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
+                                level=logging.DEBUG, format='%(levelname)s: %(message)s')
     else:
         os.mkdir(output_dir)
-        logging.basicConfig(filename=output_dir + "/" + file_root  + ".log.txt", level=logging.DEBUG, format = '%(levelname)s: %(message)s')
-    
+        logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
+                            level=logging.DEBUG, format='%(levelname)s: %(message)s')
+
     #print CPU info
     logging.info('CPU: ' + str(platform.platform()))
     sys.stderr.write('CPU: ' + str(platform.platform()) + " \n")
-    
+
     #print version
     #logging.info('Version: ' + str(__version__))
     #sys.stderr.write('Version: ' + str(__version__) + " \n")
-    
+
     #print date time info
     logging.info(str(datetime.datetime.now()))
     sys.stderr.write(str(datetime.datetime.now()) + " \n")
-    
+
     #print command used
     logging.info('Command used: ' + command_line)
     sys.stderr.write('Command used: ' + command_line + "\n")
-    
+
     sys.stderr.write("Successfully read in arguments. \n")
     logging.info("Successfully read in arguments")
-    
+
     if not account_mods:
-        logging.warning("No longer accounting for variable modification. FDR control not guaranteed if variable modifications exist.")
-        sys.stderr.write("No longer accounting for variable modification. FDR control not guaranteed if variable modifications exist. \n")
-    
+        logging.warning(
+            "No longer accounting for variable modification. FDR control not guaranteed if variable modifications exist.")
+        sys.stderr.write(
+            "No longer accounting for variable modification. FDR control not guaranteed if variable modifications exist. \n")
+
     if (not os.path.isfile(search_file_narrow)) or (not os.path.isfile(search_file_open)):
         logging.info("One of the search files does not exist.")
         sys.exit("One of the search files does not exist. \n")
 #########################################################################################################
-def TDC_flex_c(decoy_wins, target_wins, BC1 = 1, c = 1/2, lam = 1/2):
+
+
+def TDC_flex_c(decoy_wins, target_wins, BC1=1, c=1/2, lam=1/2):
     '''
     Parameters
     ----------
@@ -101,10 +112,12 @@ def TDC_flex_c(decoy_wins, target_wins, BC1 = 1, c = 1/2, lam = 1/2):
     '''
     nTD = np.cumsum(target_wins)
     nDD = np.cumsum(decoy_wins)
-    fdps = np.minimum(1, ((BC1 + nDD)/ np.maximum(nTD, 1)) * (c / (1-lam)))
+    fdps = np.minimum(1, ((BC1 + nDD) / np.maximum(nTD, 1)) * (c / (1-lam)))
     qvals = np.minimum.accumulate(fdps[::-1])[::-1]
     return(qvals)
 #########################################################################################################
+
+
 def read_pin(perc_file):
     """
     Read a Percolator tab-delimited file.
@@ -139,6 +152,8 @@ def read_pin(perc_file):
 
     return psms
 #########################################################################################################
+
+
 def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
     """
     Parse a file in chunks
@@ -166,6 +181,8 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
         psms = pd.DataFrame.from_records(psms, columns=columns)
         yield psms.apply(pd.to_numeric, errors="ignore")
 #########################################################################################################
+
+
 def make_binidx_matchcount_map(mzs, fragment_min_mz, fragment_max_mz, bin_size):
     """
     Utility function for calc_proportion_fragments_incommon.
@@ -189,6 +206,8 @@ def make_binidx_matchcount_map(mzs, fragment_min_mz, fragment_max_mz, bin_size):
         binidx_matchcount_map[bin_idx] += 1
     return binidx_matchcount_map
 ###############################################################################
+
+
 def calc_proportion_fragments_incommon(pepseq1, peptide1_mods, nterm1, cterm1,
                                        pepseq2, peptide2_mods, nterm2, cterm2,
                                        binsize, charge1, charge2):
@@ -214,14 +233,13 @@ def calc_proportion_fragments_incommon(pepseq1, peptide1_mods, nterm1, cterm1,
         fragment_charge1 = [1]
     elif charge1 >= 3:
         fragment_charge1 = [1, 2]
-    
+
     if charge2 in [1, 2]:
         fragment_charge2 = [1]
     elif charge2 >= 3:
         fragment_charge2 = [1, 2]
-    
-    
-    mzs_1 = peptides.calc_theoretical_peak_mzs(pepseq1, fragment_charge1, peptide1_mods, 
+
+    mzs_1 = peptides.calc_theoretical_peak_mzs(pepseq1, fragment_charge1, peptide1_mods,
                                                200, 3000, nterm1, cterm1)
     mzs_2 = peptides.calc_theoretical_peak_mzs(pepseq2, fragment_charge2, peptide2_mods,
                                                200, 3000, nterm2, cterm2)
@@ -238,6 +256,8 @@ def calc_proportion_fragments_incommon(pepseq1, peptide1_mods, nterm1, cterm1,
     return float(n_fragments_in_matched_bins) / (len(mzs_1) + len(mzs_2))
 
 ###############################################################################
+
+
 def parse_mods(pepseq_with_mods, static_mods):
     """
     Parse a modified peptide sequence string.
@@ -264,13 +284,14 @@ def parse_mods(pepseq_with_mods, static_mods):
             modifications.append(0.0)
             aaseq_position += 1
             modpepseq_position += 1
-        elif ( my_char == '[' ):
-            end_pos = (pepseq_with_mods[modpepseq_position + 1:].index(']') 
+        elif (my_char == '['):
+            end_pos = (pepseq_with_mods[modpepseq_position + 1:].index(']')
                        + modpepseq_position + 1)
             mod_mass = float(pepseq_with_mods[modpepseq_position + 1:end_pos])
 
             # Store a modification associated with the current position.
-            if (modifications[aaseq_position] != 0.0): #To handle when comet has a mass mod due to n- or c-term AND a variable mod on the same site. MSFragger/Tide do not appear to have this doubling up issue!
+            # To handle when comet has a mass mod due to n- or c-term AND a variable mod on the same site. MSFragger/Tide do not appear to have this doubling up issue!
+            if (modifications[aaseq_position] != 0.0):
                 modifications[aaseq_position] += mod_mass
             else:
                 modifications[aaseq_position] = mod_mass
@@ -290,11 +311,12 @@ def parse_mods(pepseq_with_mods, static_mods):
     if ("cterm" in static_mods):
       cterm_delta = static_mods["cterm"]
 
-
     return(aa_seq_list, modifications, nterm_delta, cterm_delta)
 ###############################################################################
-def get_similarity(list1, charges1, list2, charges2, frag_bin_size = 0.05, static_mods = {'C':57.02146}):
-  
+
+
+def get_similarity(list1, charges1, list2, charges2, frag_bin_size=0.05, static_mods={'C': 57.02146}):
+
   peptide_out_1 = []
   peptide_out_2 = []
   similarity_out = []
@@ -306,12 +328,11 @@ def get_similarity(list1, charges1, list2, charges2, frag_bin_size = 0.05, stati
   for index1 in range(0, len(list1)):
     peptide1 = list1[index1]
     (unmodified_peptide1, peptide1_mods, nterm1, cterm1) \
-       = parse_mods(peptide1, static_mods)
+        = parse_mods(peptide1, static_mods)
 
     for index2 in range(start_index, len(list2)):
       peptide2 = list2[index2]
       num_pairs += 1
-
 
       # Don't bother if they are the same peptide.
       if (peptide1.replace("I", "L") == peptide2.replace("I", "L")):
@@ -319,28 +340,29 @@ def get_similarity(list1, charges1, list2, charges2, frag_bin_size = 0.05, stati
         peptide_out_2.append(peptide2)
         similarity_out.append(1.0)
       else:
-         
+
         (unmodified_peptide2, peptide2_mods, nterm2, cterm2) \
-         = parse_mods(peptide2, static_mods)
-         
+            = parse_mods(peptide2, static_mods)
+
         charge1 = charges1[index1]
         charge2 = charges2[index2]
 
         similarity = calc_proportion_fragments_incommon(
-          unmodified_peptide1, peptide1_mods, nterm1, cterm1,
-          unmodified_peptide2, peptide2_mods, nterm2, cterm2,
-          frag_bin_size, charge1, charge2)
-        
+            unmodified_peptide1, peptide1_mods, nterm1, cterm1,
+            unmodified_peptide2, peptide2_mods, nterm2, cterm2,
+            frag_bin_size, charge1, charge2)
 
         num_printed += 1
-        
+
         peptide_out_1.append(peptide1)
         peptide_out_2.append(peptide2)
         similarity_out.append(similarity)
-  return(peptide_out_1, peptide_out_2, similarity_out)        
-    
+  return(peptide_out_1, peptide_out_2, similarity_out)
+
 #########################################################################################################
-def filter_scan(search_df, thresh = 0.05, frag_bin_size = 0.05, static_mods = {'C':57.02146}):
+
+
+def filter_scan(search_df, thresh=0.05, frag_bin_size=0.05, static_mods={'C': 57.02146}):
     '''
     Parameters
     ----------
@@ -359,29 +381,33 @@ def filter_scan(search_df, thresh = 0.05, frag_bin_size = 0.05, static_mods = {'
         A list of booleans indicating which PSMs should be filtered.
 
     '''
-    
-    search_df = search_df.reset_index(drop = True)
+
+    search_df = search_df.reset_index(drop=True)
     n_scans = search_df.shape[0]
-    
+
     peptide_1 = [search_df['Peptide'].loc[0]]
     charge_1 = [search_df['charge'].loc[0]]
     drop_scan = [False]*n_scans
-    
+
     #if any(search_df['sequence'][1:].str.contains(peptide_1[0])):
     for top in range(1, n_scans):
         peptide_2 = [search_df['Peptide'].loc[top]]
         charge_2 = [search_df['charge'].loc[top]]
-        results = get_similarity(peptide_1, charge_1, peptide_2, charge_2, frag_bin_size, static_mods)
+        results = get_similarity(
+            peptide_1, charge_1, peptide_2, charge_2, frag_bin_size, static_mods)
         if any(sim >= thresh for sim in results[2]):
             drop_scan[top] = True
         else:
             peptide_1 += peptide_2
             charge_1 += charge_2
-    
+
     return(drop_scan)
 
 ###############################################################################
-def wrapper(df, q, thresh, frag_bin_size, static_mods): #wrapper is used to update the manager queue every time the wrapper is called
+
+
+# wrapper is used to update the manager queue every time the wrapper is called
+def wrapper(df, q, thresh, frag_bin_size, static_mods):
     '''
     a wrapper for filter_scan that can be used for multiprocessing
     '''
@@ -389,6 +415,8 @@ def wrapper(df, q, thresh, frag_bin_size, static_mods): #wrapper is used to upda
     q.put(1)
     return(result)
 ###############################################################################
+
+
 def filter_scan_subset(df, q, task_number, return_dict, tide_used, thresh, static_mods):
     '''
     Effectively calls a wrapper for filter_scan that can be used for multiprocessing
@@ -396,23 +424,29 @@ def filter_scan_subset(df, q, task_number, return_dict, tide_used, thresh, stati
     if tide_used == 'tide':
         sys.stderr.write("Starting Process " + str(task_number) + " \n")
         logging.info("Starting Process " + str(task_number))
-        results = df.groupby(['file', 'scan', "charge", "ExpMass"]).apply(lambda x: wrapper(x, q, thresh, 0.05, static_mods))
-        results = results.sort_index(ascending = False)
+        results = df.groupby(['file', 'scan', "charge", "ExpMass"]).apply(
+            lambda x: wrapper(x, q, thresh, 0.05, static_mods))
+        results = results.sort_index(ascending=False)
         results = results.apply(pd.Series).stack().reset_index()
         return_dict[task_number] = results[0]
-    
+
 ###############################################################################
+
+
 def listener(q, list_of_df, tide_used):
     '''
     constantly checks to see if the queue q has been updated
     '''
     if tide_used == 'tide':
-        pbar = tqdm(total = sum([len(j.groupby(['file', 'scan', "charge", "ExpMass"])) for j in list_of_df]))
+        pbar = tqdm(total=sum(
+            [len(j.groupby(['file', 'scan', "charge", "ExpMass"])) for j in list_of_df]))
         for item in iter(q.get, None):
             pbar.update(item)
 
 ###############################################################################
-def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh = 0.05, n_processes = 1, neighbour_remove = True, tide_used = 'tide', static_mods = {'C':57.02146}):
+
+
+def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh=0.05, n_processes=1, neighbour_remove=True, tide_used='tide', static_mods={'C': 57.02146}):
     '''
     Parameters
     ----------
@@ -444,82 +478,102 @@ def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh = 0.05, 
     '''
     open_target_decoys['n_o'] = 0
     narrow_target_decoys['n_o'] = 1
-    
-    open_target_decoys['rank'] = open_target_decoys['SpecId'].apply(lambda x: int(x[-1])) #getting the rank
-    narrow_target_decoys['rank'] = narrow_target_decoys['SpecId'].apply(lambda x: int(x[-1])) #getting the rank
+
+    open_target_decoys['rank'] = open_target_decoys['SpecId'].apply(
+        lambda x: int(x[-1]))  # getting the rank
+    narrow_target_decoys['rank'] = narrow_target_decoys['SpecId'].apply(
+        lambda x: int(x[-1]))  # getting the rank
     narrow_target_decoys = narrow_target_decoys.loc[narrow_target_decoys['rank'] == 1, :]
-    
-    target_decoys_all = pd.concat([narrow_target_decoys, open_target_decoys]).reset_index(drop = True) #combine narrow and open PSMs
-    
-    SpecId_split = target_decoys_all.SpecId.apply(lambda x: x.split('_')) #split SpecId
-    
-    target_decoys_all[['target_decoy', 'file', 'scan', 'charge', 'rank']] = pd.DataFrame(SpecId_split.tolist()) #create new columns from SpecID
-    
+
+    target_decoys_all = pd.concat([narrow_target_decoys, open_target_decoys]).reset_index(
+        drop=True)  # combine narrow and open PSMs
+
+    SpecId_split = target_decoys_all.SpecId.apply(
+        lambda x: x.split('_'))  # split SpecId
+
+    target_decoys_all[['target_decoy', 'file', 'scan', 'charge', 'rank']] = pd.DataFrame(
+        SpecId_split.tolist())  # create new columns from SpecID
+
     target_decoys_all['charge'] = target_decoys_all['charge'].astype(int)
-    
-    target_decoys_all['Peptide'] = target_decoys_all['Peptide'].apply(lambda x: x[2:(len(x) - 2)])
-    
+
+    target_decoys_all['Peptide'] = target_decoys_all['Peptide'].apply(
+        lambda x: x[2:(len(x) - 2)])
+
     #drop duplicate PSMs that are subsequently found in the open search
     if tide_used == 'tide':
-        target_decoys_all = target_decoys_all.drop_duplicates(['file', 'scan', 'charge', 'ExpMass', 'Peptide'])
-    
+        target_decoys_all = target_decoys_all.drop_duplicates(
+            ['file', 'scan', 'charge', 'ExpMass', 'Peptide'])
+
     #makes sure the PSMs from the narrow and open search are ordered by scan first, then by their score
-    #indeed it makes sense to use xcorr_score over tailor score, as tailor_score uses candidate PSMs to 
+    #indeed it makes sense to use xcorr_score over tailor score, as tailor_score uses candidate PSMs to
     #normalise the xcorr_score - this differs from narrow to open.
     if tide_used == 'tide':
-        target_decoys_all['XCorr'] = round(target_decoys_all['XCorr'], 6) 
-        target_decoys_all = target_decoys_all.sort_values(by=['file', 'scan', 'charge', 'ExpMass', 'XCorr'], ascending = False)
-   
+        target_decoys_all['XCorr'] = round(target_decoys_all['XCorr'], 6)
+        target_decoys_all = target_decoys_all.sort_values(
+            by=['file', 'scan', 'charge', 'ExpMass', 'XCorr'], ascending=False)
+
     if not neighbour_remove:
         logging.info("Not removing neighbours.")
         sys.stderr.write("Not removing neighbours.\n")
         return(target_decoys_all)
-    
+
     logging.info("Filtering for neighbours.")
     sys.stderr.write("Filtering for neighbours.\n")
-    
-    target_decoys_all = target_decoys_all[~(target_decoys_all.Peptide.str.contains('B|J|O|U|X|Z', regex = True))]
-    target_decoys_all.reset_index(drop = True, inplace = True)
-    
+
+    target_decoys_all = target_decoys_all[~(
+        target_decoys_all.Peptide.str.contains('B|J|O|U|X|Z', regex=True))]
+    target_decoys_all.reset_index(drop=True, inplace=True)
+
     if n_processes == 1:
         tqdm.pandas()
         if tide_used == 'tide':
-            results = target_decoys_all.groupby(['file', 'scan', 'charge', 'ExpMass']).progress_apply(lambda x: filter_scan(x, thresh, 0.05, static_mods)) #apply filtering by experimental scan
-        
-        results = results.sort_index(ascending = False)
+            results = target_decoys_all.groupby(['file', 'scan', 'charge', 'ExpMass']).progress_apply(
+                lambda x: filter_scan(x, thresh, 0.05, static_mods))  # apply filtering by experimental scan
+
+        results = results.sort_index(ascending=False)
         results = results.apply(pd.Series).stack().reset_index()
-        
-        target_decoys_all['drop_scan'] = results[0]  #create drop_scan column indicating which PSMs are being kept
+
+        # create drop_scan column indicating which PSMs are being kept
+        target_decoys_all['drop_scan'] = results[0]
     else:
         #if more than 1 thread, we partition the dataframe
         if tide_used == "tide":
-            target_decoys_all['split_col'] = pd.qcut(target_decoys_all['scan'], n_processes)
-        
-        target_decoys_grouped = target_decoys_all.groupby(target_decoys_all.split_col)
-        list_of_df = [0]*n_processes #create a list of partitioned dataframes
+            target_decoys_all['split_col'] = pd.qcut(
+                target_decoys_all['scan'], n_processes)
+
+        target_decoys_grouped = target_decoys_all.groupby(
+            target_decoys_all.split_col)
+        list_of_df = [0]*n_processes  # create a list of partitioned dataframes
         for i in range(len(target_decoys_all['split_col'].unique())):
-            list_of_df[i] = target_decoys_grouped.get_group(target_decoys_all['split_col'].unique()[i])
-            list_of_df[i].reset_index(drop = True, inplace = True)
-            
+            list_of_df[i] = target_decoys_grouped.get_group(
+                target_decoys_all['split_col'].unique()[i])
+            list_of_df[i].reset_index(drop=True, inplace=True)
+
         manager = multiprocessing.Manager()
-        q = manager.Queue() #creating instance of manager queue
-        return_dict = manager.dict() #creating manager dict variable that can be used to store changes to the argument by ALL processes at the same time
-        proc = multiprocessing.Process(target=listener, args=(q, list_of_df, tide_used)) 
-        proc.start() #start listening for updates to manager queue
-        workers = [multiprocessing.Process(target = filter_scan_subset, args=(list_of_df[i], q, i, return_dict, tide_used, thresh, static_mods)) for i in range(n_processes)] #now run each of the processes
+        q = manager.Queue()  # creating instance of manager queue
+        # creating manager dict variable that can be used to store changes to the argument by ALL processes at the same time
+        return_dict = manager.dict()
+        proc = multiprocessing.Process(
+            target=listener, args=(q, list_of_df, tide_used))
+        proc.start()  # start listening for updates to manager queue
+        workers = [multiprocessing.Process(target=filter_scan_subset, args=(
+            list_of_df[i], q, i, return_dict, tide_used, thresh, static_mods)) for i in range(n_processes)]  # now run each of the processes
         for worker in workers:
             worker.start()
         for worker in workers:
             worker.join()
-        q.put(None) 
+        q.put(None)
         proc.join()
-        
+
         for i in range(len(target_decoys_all['split_col'].unique())):
-            target_decoys_all.loc[target_decoys_all['split_col'] == target_decoys_all['split_col'].unique()[i], 'drop_scan'] = list(return_dict[i]) #update the main dataframe with the results from each process
-            
-    target_decoys_all = target_decoys_all[target_decoys_all['drop_scan'] == False] #drop the neighbours
-    target_decoys_all.reset_index(drop = True, inplace = True)
-    
-    target_decoys_all.drop(['target_decoy', 'file', 'scan', 'charge', 'drop_scan'], axis = 1, inplace = True)
+            target_decoys_all.loc[target_decoys_all['split_col'] == target_decoys_all['split_col'].unique(
+            )[i], 'drop_scan'] = list(return_dict[i])  # update the main dataframe with the results from each process
+
+    # drop the neighbours
+    target_decoys_all = target_decoys_all[target_decoys_all['drop_scan'] == False]
+    target_decoys_all.reset_index(drop=True, inplace=True)
+
+    target_decoys_all.drop(
+        ['target_decoy', 'file', 'scan', 'charge', 'drop_scan'], axis=1, inplace=True)
 
     return(target_decoys_all)

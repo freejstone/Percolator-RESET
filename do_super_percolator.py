@@ -169,6 +169,8 @@ USAGE = """USAGE: python3 do_super_percolator.py [options] <narrow> <wide> <matc
             
 """
 #########################################################################################################
+
+
 def main():
     global USAGE
 
@@ -184,6 +186,7 @@ def main():
     account_mods = True
     precursor_bin_width = 1.0005079/4
     neighbour_remove = True
+    remove = ['bins', 'pi_0', 'min_tailor_score', 'min_xcorr_score']
     thresh = 0.05
     n_processes = 1
     output_dir = '.'
@@ -237,6 +240,9 @@ def main():
                 sys.stderr.write("Invalid argument for --neighbour_remove")
                 sys.exit(1)
             sys.argv = sys.argv[1:]
+        elif (next_arg == "--remove"):
+            remove = str(sys.argv[0]).split(',')
+            sys.argv = sys.argv[1:]
         elif (next_arg == "--n_processes"):
             n_processes = int(sys.argv[0])
             sys.argv = sys.argv[1:]
@@ -288,7 +294,12 @@ def main():
     narrow_df = uf.read_pin(search_file_narrow)  # reading
     open_df = uf.read_pin(search_file_open)  # reading
     peptide_list_df = pd.read_table(td_list)  # reading
-
+    
+    if 'decoy(s)' in peptide_list_df.columns:
+        peptide_list_df.rename(columns = {'decoy(s)':'decoy'}, inplace = True)
+    
+    peptide_list_df.drop_duplicates(inplace = True)
+    
     #doing filtering
     df_all = uf.filter_narrow_open(narrow_df, open_df, thresh, n_processes,
                                    neighbour_remove, tide_used='tide', static_mods=static_mods)
@@ -296,11 +307,11 @@ def main():
     #doing peptide level competition
     df_all = spf.peptide_level(
         df_all, peptide_list_df, precursor_bin_width=precursor_bin_width)
-        
+
     #df_all1['freq'] = df_all1['freq'].rank()
 
-    train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv(df_all, folds=3, Cs=[
-                                                                   0.1, 1, 10], total_iter=total_iter, kernel='linear', alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree)
+    train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv(df_all, folds=folds, Cs=[
+        0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove)
     power = pd.DataFrame(zip(train_power, std_power, true_power), columns=[
                          'train_power', 'std_power', 'true_power'])
 
