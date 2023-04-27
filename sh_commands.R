@@ -86,3 +86,28 @@ for (dataset in datasets){
     command_all = c(command_all, command_temp)
   }
 }
+
+
+command = "python do_super_percolator.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.005 --output_dir datasets/PXID/crux-output --file_root IND_top_positive datasets/PXID/crux-output/narrow_5IND.make-pin.pin datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.05 --svm F --output_dir datasets/PXID/crux-output --file_root IND_qda datasets/PXID/crux-output/narrow_5IND.make-pin.pin datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+

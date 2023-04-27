@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr  4 17:15:01 2023
+Created on Mon Apr 24 12:30:14 2023
 
-@author: jackfreestone
-
-This module performs the percolator algorithm with strict FDR control 
+@author: jfre0619
 """
 import os
 import time
@@ -14,8 +12,9 @@ import numpy as np
 import pandas as pd
 import random
 import logging
+import re
 import utility_functions as uf
-import super_percolator_functions as spf
+import super_percolator_functions_extra as spf
 
 USAGE = """USAGE: python3 do_super_percolator.py [options] <narrow> <wide> <matching>
 
@@ -152,9 +151,9 @@ def main():
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
     if (len(sys.argv) == 3):
-        search_file_narrow = sys.argv[0]
-        search_file_open = sys.argv[1]
-        td_list = sys.argv[2]
+        search_files_narrow = str(sys.argv[0]).split(',')
+        search_files_open = str(sys.argv[1]).split(',')
+        td_lists = str(sys.argv[2]).split(',')
     else:
         #sys.stderr.write('Version: ' + str(__version__) + " \n")
         sys.stderr.write(USAGE)
@@ -167,39 +166,89 @@ def main():
 
     #print meta information, checking directory and printing warnings
     uf.print_info(command_line, output_dir, file_root, overwrite,
-                  account_mods, search_file_narrow, search_file_open)
+                  account_mods, search_files_narrow, search_files_open)
 
     sys.stderr.write("Reading in search files and peptide list. \n")
     logging.info("Reading in search files and peptide list.")
-
-    narrow_df = uf.read_pin(search_file_narrow)  # reading
-    open_df = uf.read_pin(search_file_open)  # reading
-    peptide_list_df = pd.read_table(td_list)  # reading
     
-    if 'decoy(s)' in peptide_list_df.columns:
-        peptide_list_df.rename(columns = {'decoy(s)':'decoy'}, inplace = True)
+    #reading
+    narrow_dfs = []
+    open_dfs = []
+    peptide_list_dfs = []
+    for search_file_narrow in search_files_narrow:
+        narrow_dfs.append(uf.read_pin(search_file_narrow))
+    for search_file_open in search_files_open:
+        open_dfs.append(uf.read_pin(search_file_open))
+    for td_list in td_lists:
+        peptide_list_df = pd.read_table(td_list)
+        if 'decoy(s)' in peptide_list_df.columns:
+            peptide_list_df.rename(columns = {'decoy(s)':'decoy'}, inplace = True)
+        peptide_list_df.drop_duplicates(inplace = True)
+        peptide_list_dfs.append(peptide_list_df)
     
-    peptide_list_df.drop_duplicates(inplace = True)
+    #do PSM_level competitions
+    narrow_df_comp = spf.PSM_level(narrow_dfs[0], narrow_dfs[1], top = 1)
+    open_df_comp = spf.PSM_level(open_dfs[0], open_dfs[1], top = 5)
     
     #doing filtering
-    df_all = uf.filter_narrow_open(narrow_df, open_df, thresh, n_processes,
+    df_all = uf.filter_narrow_open(narrow_df_comp, open_df_comp, thresh, n_processes,
                                    neighbour_remove, tide_used='tide', static_mods=static_mods)
-
-    #doing peptide level competition
-    df_all = spf.peptide_level(
-        df_all, peptide_list_df, precursor_bin_width=precursor_bin_width)
-
-    #df_all1['freq'] = df_all1['freq'].rank()
     
-    if svm:
-        train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv(df_all, folds=folds, Cs=[
-            0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
-        power = pd.DataFrame(zip(train_power, std_power, true_power), columns=[
-                             'train_power', 'std_power', 'true_power'])
-    else:
-        true_power, discoveries = spf.do_iterative_lda_cv(df_all, total_iter=total_iter, p = 0.5, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove=remove, top_positive=top_positive, qda = True)
-        power = pd.DataFrame(true_power, columns=[
-                             'true_power'])
+    #doing filtering using extra decoy
+    df_extra_decoy = uf.filter_narrow_open(narrow_dfs[-1], open_dfs[-1], thresh, n_processes,
+                                   neighbour_remove, tide_used='tide', static_mods=static_mods)
+    
+    #get extra features here like bin, freq, pi_0
+    df_pseudo_target = df_all.copy()
+    df_pseudo_target = df_pseudo_target[df['rank'] == 1]
+    df_pseudo_target['Label'] = 1
+    df_extra_decoy = 
+    
+    
+    #do pseudo-competition at the PSM level
+    
+    #do iterative SVM
+    
+    #do peptide-level competition
+    
+    #do TDC
+    
+    #need to remove df_extra_decoy that overlap with one of them
+    #df_extra_decoy = df_extra_decoy[~(df_extra_decoy.Peptide.isin(peptide_list_dfs[0].decoy))].reset_index(drop = True)
+
+    #doing peptide level competition base
+    df_all = peptide_level(df_all, peptide_list_dfs[0]).reset_index(drop = True)
+    
+    #doing the same for the extra decoy -- this is really just to remove low ranked peptides
+    df_extra_decoy = peptide_level(df_extra_decoy, peptide_list_dfs[-1]).reset_index(drop = True)
+    
+    #preparing pseudo level competition
+    df_all_pseudo = df_all.copy().drop(['min_tailor_score', 'min_xcorr_score'], axis = 1)
+    df_all_pseudo['Label'] = 1
+    df_all_pseudo = df_all_pseudo[df_all_pseudo.original_target.isin(df_extra_decoy.original_target)]
+    df_extra_decoy = df_extra_decoy[df_extra_decoy.original_target.isin(df_all_pseudo.original_target)]
+    df_all_pseudo = pd.concat([df_all_pseudo, df_extra_decoy])
+    
+    #getting bin, freq, pi0
+    df_all_pseudo = spf.get_bin_freq_pi0(df_all_pseudo, precursor_bin_width = precursor_bin_width)
+    df_all[['bins', 'freq', 'pi_0']] = df_all_pseudo[['bins', 'freq', 'pi_0']][df_all_pseudo.Label == 1]
+    
+    #doing pseudo level competition
+    df_all_pseudo = peptide_level(df_all_pseudo, peptide_list_dfs[-1])
+    
+    #drop original_target
+    df_all_pseudo.drop('original_target', axis = 1, inplace = True)
+    df_all.drop('original_target', axis = 1, inplace = True)
+    
+    df_all_pseudo.drop('n_o', axis = 1, inplace = True)
+    df_all.drop('n_o', axis = 1, inplace = True)
+    
+    
+    train_power, std_power, true_power, discoveries = do_iterative_svm_cv(df_all_pseudo.copy(), df_all.copy(), folds=folds, Cs=[
+        0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+    power = pd.DataFrame(zip(train_power, std_power, true_power), columns=[
+                         'train_power', 'std_power', 'true_power'])
+        
 
     #write results
     if output_dir != './':

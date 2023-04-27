@@ -83,10 +83,15 @@ def print_info(command_line, output_dir, file_root, overwrite, account_mods, sea
             "No longer accounting for variable modification. FDR control not guaranteed if variable modifications exist.")
         sys.stderr.write(
             "No longer accounting for variable modification. FDR control not guaranteed if variable modifications exist. \n")
-
-    if (not os.path.isfile(search_file_narrow)) or (not os.path.isfile(search_file_open)):
-        logging.info("One of the search files does not exist.")
-        sys.exit("One of the search files does not exist. \n")
+    
+    if type(search_file_narrow) == str:
+        if (not os.path.isfile(search_file_narrow)) or (not os.path.isfile(search_file_open)):
+            logging.info("One of the search files does not exist.")
+            sys.exit("One of the search files does not exist. \n")
+    if type(search_file_narrow) == list:
+        if any(not os.path.isfile(i) for i in search_file_narrow) or any(not os.path.isfile(i) for i in search_file_open):
+            logging.info("One of the search files does not exist.")
+            sys.exit("One of the search files does not exist. \n")
 #########################################################################################################
 
 
