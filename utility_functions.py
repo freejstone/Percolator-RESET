@@ -503,6 +503,8 @@ def filter_narrow_open(narrow_target_decoys, open_target_decoys, thresh=0.05, n_
 
     target_decoys_all['Peptide'] = target_decoys_all['Peptide'].apply(
         lambda x: x[2:(len(x) - 2)])
+    
+    target_decoys_all['rank'] = target_decoys_all['rank'].astype(int)
 
     #drop duplicate PSMs that are subsequently found in the open search
     if tide_used == 'tide':

@@ -46,7 +46,7 @@ def main():
     account_mods = True
     precursor_bin_width = 1.0005079/4
     neighbour_remove = True
-    remove = ['bins', 'pi_0', 'min_tailor_score', 'min_xcorr_score']
+    remove = ['bins', 'pi_0', 'enzInt']
     thresh = 0.05
     top_positive = True
     n_processes = 1
@@ -195,72 +195,54 @@ def main():
                                    neighbour_remove, tide_used='tide', static_mods=static_mods)
     
     #doing filtering using extra decoy
-    df_extra_decoy = uf.filter_narrow_open(narrow_dfs[-1], open_dfs[-1], thresh, n_processes,
-                                   neighbour_remove, tide_used='tide', static_mods=static_mods)
+    df_extra_decoy_narrow, df_extra_decoy_open = narrow_dfs[-1].copy(), open_dfs[-1].copy()
     
-    #get extra features here like bin, freq, pi_0
-    df_pseudo_target = df_all.copy()
-    df_pseudo_target = df_pseudo_target[df['rank'] == 1]
-    df_pseudo_target['Label'] = 1
-    df_extra_decoy = 
+    df_extra_decoy_narrow = spf.get_rank(df_extra_decoy_narrow, 1) #getting ranks
+    df_extra_decoy_open = spf.get_rank(df_extra_decoy_open, 1) 
     
+    df_extra_decoy_narrow['n_o'] = 1 #getting narrow_open label
+    df_extra_decoy_open['n_o'] = 0
     
-    #do pseudo-competition at the PSM level
+    df_extra_decoy = pd.concat([df_extra_decoy_narrow, df_extra_decoy_open]) #combining narrow_open extra decoys
     
-    #do iterative SVM
+    #remove repeated decoy peptides
+    df_extra_decoy['Peptide'] = df_extra_decoy['Peptide'].apply(
+        lambda x: x[2:(len(x) - 2)])
+    df_extra_decoy = df_extra_decoy[~(df_extra_decoy.Peptide.isin(peptide_list_dfs[0].decoy))]
     
-    #do peptide-level competition
-    
-    #do TDC
-    
-    #need to remove df_extra_decoy that overlap with one of them
-    #df_extra_decoy = df_extra_decoy[~(df_extra_decoy.Peptide.isin(peptide_list_dfs[0].decoy))].reset_index(drop = True)
-
-    #doing peptide level competition base
-    df_all = peptide_level(df_all, peptide_list_dfs[0]).reset_index(drop = True)
-    
-    #doing the same for the extra decoy -- this is really just to remove low ranked peptides
-    df_extra_decoy = peptide_level(df_extra_decoy, peptide_list_dfs[-1]).reset_index(drop = True)
-    
-    #preparing pseudo level competition
-    df_all_pseudo = df_all.copy().drop(['min_tailor_score', 'min_xcorr_score'], axis = 1)
-    df_all_pseudo['Label'] = 1
-    df_all_pseudo = df_all_pseudo[df_all_pseudo.original_target.isin(df_extra_decoy.original_target)]
-    df_extra_decoy = df_extra_decoy[df_extra_decoy.original_target.isin(df_all_pseudo.original_target)]
-    df_all_pseudo = pd.concat([df_all_pseudo, df_extra_decoy])
-    
-    #getting bin, freq, pi0
-    df_all_pseudo = spf.get_bin_freq_pi0(df_all_pseudo, precursor_bin_width = precursor_bin_width)
-    df_all[['bins', 'freq', 'pi_0']] = df_all_pseudo[['bins', 'freq', 'pi_0']][df_all_pseudo.Label == 1]
-    
-    #doing pseudo level competition
-    df_all_pseudo = peptide_level(df_all_pseudo, peptide_list_dfs[-1])
-    
-    #drop original_target
-    df_all_pseudo.drop('original_target', axis = 1, inplace = True)
-    df_all.drop('original_target', axis = 1, inplace = True)
-    
-    df_all_pseudo.drop('n_o', axis = 1, inplace = True)
-    df_all.drop('n_o', axis = 1, inplace = True)
-    
-    
-    train_power, std_power, true_power, discoveries = do_iterative_svm_cv(df_all_pseudo.copy(), df_all.copy(), folds=folds, Cs=[
-        0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
-    power = pd.DataFrame(zip(train_power, std_power, true_power), columns=[
-                         'train_power', 'std_power', 'true_power'])
+    df_extra_decoy.reset_index(drop = True, inplace = True)
         
+    #get pseudo PSM level competition
+    df_pseudo, df_all = spf.pseudo_PSM_level(df_all.copy(), df_extra_decoy.copy(), 2, precursor_bin_width)
+                                 
+    #Doing iterative PSM
+    train_power, std_power, true_power, real_df = spf.do_iterative_svm_cv(df_pseudo.copy(), df_all.copy(), folds=folds, Cs=[
+        0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+    
+    #doing peptide-level competition now
+    real_df_peptide = spf.peptide_level(real_df.copy(), peptide_list_dfs[0].copy())
+    
+    #the new direction
+    real_df_peptide.sort_values(
+        by='SVM_scores', ascending=False).reset_index(drop=True)
+    
+    #get_qvals
+    q_val = uf.TDC_flex_c(
+        real_df_peptide.Label == -1, real_df_peptide.Label == 1, c=1/2, lam=1/2)
+    
+    real_df_peptide['q_vals'] = q_val
+    
+    obs_power = sum((q_val <= FDR_threshold) & (real_df_peptide.Label == 1))
 
     #write results
     if output_dir != './':
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-        discoveries.to_csv(output_dir + "/" + file_root +
+        real_df_peptide.to_csv(output_dir + "/" + file_root +
                            ".peptides.txt", header=True, index=False, sep='\t')
-        power.to_csv(output_dir + "/" + file_root + ".power.txt",
-                     header=True, index=False, sep='\t')
 
     else:
-        discoveries.to_csv(output_dir + "/" + file_root +
+        real_df_peptide.to_csv(output_dir + "/" + file_root +
                            ".peptides.txt", header=True, index=False, sep='\t')
 
     end_time = time.time()
