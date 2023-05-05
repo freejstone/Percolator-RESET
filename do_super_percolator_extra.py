@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import random
 import logging
-import re
 import utility_functions as uf
 import super_percolator_functions_extra as spf
 
@@ -233,6 +232,9 @@ def main():
     real_df_peptide['q_vals'] = q_val
     
     obs_power = sum((q_val <= FDR_threshold) & (real_df_peptide.Label == 1))
+
+    sys.stderr.write("%s peptides discovered at %s FDR. \n" %(obs_power, FDR_threshold))
+    logging.info("%s peptides discovered at %s FDR." %(obs_power, FDR_threshold))
 
     #write results
     if output_dir != './':
