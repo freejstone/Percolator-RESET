@@ -158,6 +158,15 @@ def main():
                 sys.stderr.write("Invalid argument for --svm")
                 sys.exit(1)
             sys.argv = sys.argv[1:]
+        elif (next_arg == '--stratified'):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                stratified = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                stratified = False
+            else:
+                sys.stderr.write("Invalid argument for --stratified")
+                sys.exit(1)
+            sys.argv = sys.argv[1:]
         else:
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
@@ -201,11 +210,11 @@ def main():
     
     if svm:
         if stratified:
-            train_power, std_power, true_power, discoveries = spf.do_iterative_stratified_svm_cv(df_all, folds=folds, Cs=[
-                0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+            train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv_stratified(df_all, folds=folds, Cs=[
+                0.1, 1, 10], p = 0.5, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
         else:
             train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv(df_all, folds=folds, Cs=[
-                0.1, 1, 10], total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+                0.1, 1, 10], p = 0.5, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
         power = pd.DataFrame(zip(train_power, std_power, true_power), columns=[
                              'train_power', 'std_power', 'true_power'])
     else:
