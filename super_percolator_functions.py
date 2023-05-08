@@ -139,7 +139,7 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4):
 #########################################################################################################
 
 
-def custom_accuracy(y, y_pred, alpha=0.01):
+def custom_accuracy(y, y_pred, alpha=0.01, p=0.5):
     '''
     Parameters
     ----------
@@ -158,7 +158,7 @@ def custom_accuracy(y, y_pred, alpha=0.01):
     decoy_wins = [i == -1 for i in y]
     target_wins = [i == 1 for i in y]
     qvals = uf.TDC_flex_c(decoy_wins, target_wins, BC1=1,
-                          c=3/4, lam=3/4)  # doing TDC
+                          c=1 - p/2, lam=1 - p/2)  # doing TDC
     disc = sum((qvals[i] <= alpha) and (y[i] == 1)
                for i in range(len(y)))  # getting discoveries
     return(disc)
@@ -215,7 +215,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
         grid = GridSearchCV(svm.SVC(), param_grid=param_grid,
                             cv=folds, scoring=my_scorer)
     else:
-        grid = RandomizedSearchCV(svm.SVC(), param_distributions=param_grid, n_iter=10,
+        grid = GridSearchCV(svm.SVC(), param_grid=param_grid,
                                   cv=folds, scoring=my_scorer)
     grid.fit(df, labels)
     while max(grid.cv_results_['mean_test_score']) == 0:
@@ -1365,6 +1365,175 @@ def do_svm(df_all, train_decoys, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, 
     train_decoys['SVM_score'] = new_scores
 
     return(train_power, train_std, true_power, real_df, train_decoys)
+
+
+##########
+
+
+def do_lda(df_all, train_decoys, total_iter=10, p=0.5, alpha=0.01, train_alpha=0.01, remove=None, top_positive=True, qda=False):
+
+    train_targets = df_all[~(df_all.index.isin(train_decoys.index))].copy()
+    train_targets.loc[:, 'Label'] = 1
+
+    train_df = pd.concat([train_decoys, train_targets]).reset_index(drop=True)
+    train_df = train_df.sample(frac=1).reset_index(drop=True)
+    
+    if type(remove) == list:
+        train_df.drop(remove, axis=1, inplace=True, errors = 'ignore')
+    if 'SVM_score' in train_df.columns:
+        train_df = train_df.sort_values(
+            by = 'SVM_score', ascending=False).reset_index(drop = True)
+    elif 'TailorScore' in train_df.columns:
+        train_df = train_df.sort_values(
+            by='TailorScore', ascending=False).reset_index(drop=True)
+    else:
+        train_df = train_df.sort_values(
+            by='XCorr', ascending=False).reset_index(drop=True)
+
+    #real df
+    real_df = df_all[~(df_all.index.isin(train_decoys.index))
+                     ].copy().reset_index(drop=True)
+    if type(remove) == list:
+        real_df.drop(remove, axis=1, inplace=True, errors = 'ignore')
+
+    #Preprocess dataframe
+    SVM_train_labels = train_df['Label'].copy()
+    if 'filename' in train_df.columns:
+        SVM_train_features = train_df.drop(
+            ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+    else:
+        SVM_train_features = train_df.drop(
+            ['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
         
+    #Get rid of colinear features
+    sds = SVM_train_features.apply(np.std, axis = 0)
+    SVM_train_features = SVM_train_features[SVM_train_features.columns[sds != 0]]
+
+    #getting initial positive and negative set
+    q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
+                           SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+    if top_positive:
+        positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
+    else:
+        positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
+    negative_set_indxs = (SVM_train_labels == -1)
+    
+    while sum(positive_set_indxs) == 0:
+        train_alpha = train_alpha + 0.005
+        #getting initial positive and negative set
+        q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
+                               SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+        if top_positive:
+            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
+        else:
+            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
+        negative_set_indxs = (SVM_train_labels == -1)
+
+    SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].reset_index(
+        drop=True).copy()
+    SVM_train_labels_iter = SVM_train_labels.loc[positive_set_indxs | negative_set_indxs].reset_index(
+        drop=True).copy()
+
+    SVM_train_features_iter = SVM_train_features_iter.sample(frac=1)
+    SVM_train_labels_iter = SVM_train_labels_iter.loc[SVM_train_features_iter.index]
+
+    SVM_train_features_iter.reset_index(drop=True, inplace=True)
+    SVM_train_labels_iter.reset_index(drop=True, inplace=True)
+
+    train_power, train_std, true_power = [
+        0]*total_iter, [0]*total_iter, [0]*total_iter
+
+    logging.info("Conducting iterative lda.")
+    sys.stderr.write("Conducting iterative lda.\n")
+
+    for iterate in range(total_iter):
+        logging.info("iteration: %s." % (iterate))
+        sys.stderr.write("iteration: %s.\n" % (iterate))
+        #determining best direction with cross validation for parameter selection
+        grid = train_lda_cv(SVM_train_labels_iter, SVM_train_features_iter)
         
+        #best_train_power = max(grid.cv_results_['mean_test_score'])
+        #best_train_std = max(grid.cv_results_['std_test_score'])
+        #train_power[iterate] = best_train_power
+        #train_std[iterate] = best_train_std
+
+        #the new direction
+        new_scores = grid.decision_function(SVM_train_features)
+
+        new_idx = pd.Series(new_scores).sort_values(ascending=False).index
+
+        SVM_train_features = SVM_train_features.loc[new_idx].reset_index(
+            drop=True)
+
+        SVM_train_labels = SVM_train_labels.loc[new_idx].reset_index(drop=True)
+
+        #determine the new positive and negative set
+        q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
+                               SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+        
+        if top_positive:
+            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= alpha) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
+        else:
+            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= alpha)
+        negative_set_indxs = (SVM_train_labels == -1)
+        
+        while sum(positive_set_indxs) == 0:
+            train_alpha = train_alpha + 0.005
+            #getting initial positive and negative set
+            q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
+                                   SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+            if top_positive:
+                positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
+            else:
+                positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
+            negative_set_indxs = (SVM_train_labels == -1)
+
+        SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].reset_index(
+            drop=True).copy()
+        SVM_train_labels_iter = SVM_train_labels.loc[positive_set_indxs | negative_set_indxs].reset_index(
+            drop=True).copy()
+
+        SVM_train_features_iter = SVM_train_features_iter.sample(frac=1)
+        SVM_train_labels_iter = SVM_train_labels_iter.loc[SVM_train_features_iter.index]
+
+        SVM_train_features_iter.reset_index(drop=True, inplace=True)
+        SVM_train_labels_iter.reset_index(drop=True, inplace=True)
+
+        #get actual power if we were to stop here
+        real_labels = real_df['Label'].copy()
+        if 'filename' in real_df.columns:
+            real_df_test = real_df.drop(
+                ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+        else:
+            real_df_test = real_df.drop(
+                ['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            
+        #Get rid of colinear features
+        sds = real_df_test.apply(np.std, axis = 0)
+        real_df_test = real_df_test[real_df_test.columns[sds != 0]]
+
+        #the new direction
+        new_scores = grid.decision_function(real_df_test)
+        new_idx = pd.Series(new_scores).sort_values(ascending=False).index
+        new_labels = real_labels.loc[new_idx].reset_index(drop=True)
+
+        q_val = uf.TDC_flex_c(
+            new_labels == -1, new_labels == 1, c=1/(2 - p), lam=1/(2 - p))
+        power_final = sum((q_val <= alpha) & (new_labels == 1))
+        true_power[iterate] = power_final
+
+        logging.info("Observed power: %s." % (power_final))
+        sys.stderr.write("Observed power: %s.\n" % (power_final))
+
+        #logging.info("Trained power: %s." % (best_train_power))
+        #sys.stderr.write("Trained power: %s.\n" % (best_train_power))
+
+        #logging.info("Std trained power: %s." % (best_train_std))
+        #sys.stderr.write("Std trained power: %s.\n" % (best_train_std))
+
+    #using the last new_idx to report the discoveries
+    real_df = real_df.loc[new_idx].reset_index(drop=True)
+    real_df_discoveries = real_df[(q_val <= alpha) & (new_labels == 1)]
+
+    return(true_power, real_df_discoveries)
     
