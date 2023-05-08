@@ -59,6 +59,8 @@ def main():
     command_line = ' '.join(sys.argv)
     svm = True
     stratified = False
+    FDR_grid = [0.3]
+    p_init = 0.25
 
     # Parse the command line.
     sys.argv = sys.argv[1:]
@@ -167,6 +169,12 @@ def main():
                 sys.stderr.write("Invalid argument for --stratified")
                 sys.exit(1)
             sys.argv = sys.argv[1:]
+        elif (next_arg == '--FDR_grid'):
+            FDR_grid = [float(j) for j in sys.argv[0].split(',')]
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--p_init"):
+            p_init = float(sys.argv[0])
+            sys.argv = sys.argv[1:]
         else:
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
@@ -204,14 +212,59 @@ def main():
     df_all = uf.filter_narrow_open(narrow_df, open_df, thresh, n_processes,
                                    neighbour_remove, tide_used='tide', static_mods=static_mods)
 
-    #doing peptide level competition
+    #doing peptide level competition and get bins/freq
     df_all = spf.peptide_level(
         df_all, peptide_list_df, precursor_bin_width=precursor_bin_width)
     
     if svm:
         if stratified:
-            train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv_stratified(df_all, folds=folds, Cs=[
-                0.1, 1, 10], p = 0.5, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+            #get second sample proportion
+            p_next = 1 - 1/(2*(1 - p_init))
+            
+            #do scale
+            df_all = spf.do_scale(df_all)
+            
+            #create target-decoys at pseudolevel
+            train_decoys = df_all[df_all['Label']
+                                       == -1].sample(frac=p_init).copy()
+            
+            train_power, std_power, true_power, df_new, train_decoys_new = spf.do_svm(df_all, train_decoys, folds=folds, Cs=[
+                        0.1, 1, 10], p = p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+            
+            #go to to the top 20% and repeat
+            df_new['trained'] = 0
+            train_decoys_new['trained'] = 1
+            df_new_temp = pd.concat([df_new, train_decoys_new])
+            
+            df_new_temp = df_new_temp.sort_values(
+                by='SVM_score', ascending=False).reset_index(drop=True)
+            
+            q_val = uf.TDC_flex_c(
+                df_new_temp.Label == -1, df_new_temp.Label == 1)
+            
+            
+            df_new_temp = df_new_temp[q_val <= FDR_grid[0]].reset_index(drop = True)
+            
+            train_decoys1 = df_new_temp[df_new_temp.trained == 1]
+            
+            train_decoys2 = df_new_temp[(df_new_temp['Label']
+                                       == -1) & (df_new_temp.trained == 0)].sample(frac=p_next).copy()
+            
+            df_new_temp = df_new_temp.drop('trained', axis = 1)
+            
+            train_decoys_new = pd.concat([train_decoys1, train_decoys2])
+            
+            train_decoys_new = train_decoys_new.drop('trained', axis = 1)
+           
+            train_power_next, std_power_next, true_power_next, discoveries, train_decoys_new = spf.do_svm(df_new_temp, train_decoys_new, folds=folds, Cs=[
+                        0.1, 1, 10], p = 1/2, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
+            
+            train_power.append(train_power_next)
+            std_power.append(std_power_next)
+            true_power.append(true_power_next)
+            
+            power = pd.DataFrame(zip(train_power, std_power, true_power), columns=[
+                                 'train_power', 'std_power', 'true_power'])
         else:
             train_power, std_power, true_power, discoveries = spf.do_iterative_svm_cv(df_all, folds=folds, Cs=[
                 0.1, 1, 10], p = 0.5, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=top_positive)
