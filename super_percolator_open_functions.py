@@ -57,15 +57,25 @@ def PSM_level(target_file, decoy_file, top=1):
     
     if type(decoy_file) == type(None):
         df = target_file
+    elif type(decoy_file) == list:
+        for i in range(len(decoy_file)):
+            decoy_file[i]['filename'] = i
+        decoy_file_combined = pd.concat(decoy_file)
+        target_file['filename'] = 0
+        df = pd.concat([target_file, decoy_file_combined])
     else:
         df = pd.concat([target_file, decoy_file])  # combine
 
     df = df.sample(frac=1).reset_index(drop=True)  # randomly shuffle
-
-    df['rank'] = df.groupby(["filename", "ScanNr", "ExpMass"])["XCorr"].rank(
-        "first", ascending=False).astype(int)  # get ranking
+    
+    df = df.sort_values(by='TailorScore', ascending=False).reset_index(
+        drop=True)  # sort by score
+    
+    df['rank'] = df.groupby(["ScanNr", "ExpMass"])["TailorScore"].rank("first", ascending=False)
 
     df = df[df['rank'] <= top]  # get top PSMs for each scan
+    
+    df['rank'] = df['rank'].astype(int)
 
     df['SpecId'] = df.apply(lambda x: '_'.join(x.SpecId.split(
         '_')[:-1]) + '_' + str(x['rank']), axis=1)  # split specID
@@ -163,16 +173,27 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep
 
     # getting best score for each Peptide
     df_all = df_all.drop_duplicates(subset='Peptide')
-
-    df_all_sub = df_all[df_all.Label == -1].copy()
-    peptide_list_df.rename(
-        columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
-    df_all_sub = df_all_sub.merge(
-        peptide_list_df[['original_target', 'Peptide']], how='left', on='Peptide')
-    df_all['original_target'] = df_all['Peptide']
-    df_all.loc[df_all.Label == -1,
-               'original_target'] = df_all_sub['original_target'].tolist()
-
+    
+    if type(peptide_list_df) == list:
+        df_all['original_target'] = df_all['Peptide']
+        for i in range(len(peptide_list_df)):
+            df_all_sub = df_all[(df_all.Label == -1) & (df_all.filename == i)].copy()
+            peptide_list_df[i].rename(
+                columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
+            df_all_sub = df_all_sub.merge(
+                peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
+            df_all.loc[(df_all.Label == -1) & (df_all.filename == i),
+                       'original_target'] = df_all_sub['original_target_y'].tolist()
+    else:
+        df_all_sub = df_all[df_all.Label == -1].copy()
+        peptide_list_df.rename(
+            columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
+        df_all_sub = df_all_sub.merge(
+            peptide_list_df[['original_target', 'Peptide']], how='left', on='Peptide')
+        df_all['original_target'] = df_all['Peptide']
+        df_all.loc[df_all.Label == -1,
+                   'original_target'] = df_all_sub['original_target'].tolist()
+    
     df_all['original_target'] = df_all['original_target'].str.replace(
         "\\[|\\]|\\.|\\d+", "", regex=True)
 
@@ -377,7 +398,7 @@ def do_scale(df_all, df_extra = None):
 
 ################################################################################################
 
-def do_svm(df_all, train_all, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, p=0.5, kernel='linear', alpha=0.01, train_alpha=0.01, degree=None, remove=None, top_positive=True):
+def do_svm(df_all, train_all, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, p=0.5, kernel='linear', alpha=0.01, train_alpha=0.01, degree=None, remove=None, top_positive=True, mult = 1):
 
     train_alpha_init = train_alpha
     
@@ -424,7 +445,7 @@ def do_svm(df_all, train_all, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, p=0
         train_alpha = train_alpha + 0.005
         #getting initial positive and negative set
         q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                               SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+                               SVM_train_labels == 1, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
         if top_positive:
             positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (train_df.SpecId.isin(real_df.SpecId)) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
         else:
@@ -473,7 +494,7 @@ def do_svm(df_all, train_all, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, p=0
 
         #determine the new positive and negative set
         q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                               SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+                               SVM_train_labels == 1, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
         
         if top_positive:
             positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (train_df.SpecId.isin(real_df.SpecId)) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
@@ -485,7 +506,7 @@ def do_svm(df_all, train_all, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, p=0
             train_alpha = train_alpha + 0.005
             #getting initial positive and negative set
             q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                                   SVM_train_labels == 1, c=1 - p/2, lam=1 - p/2)
+                                   SVM_train_labels == 1, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
             if top_positive:
                 positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (train_df.SpecId.isin(real_df.SpecId)) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
             else:
@@ -523,7 +544,7 @@ def do_svm(df_all, train_all, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, p=0
         new_labels = real_labels.loc[new_idx].reset_index(drop=True)
 
         q_val = uf.TDC_flex_c(
-            new_labels == -1, new_labels == 1, c=1/(2 - p), lam=1/(2 - p))
+            new_labels == -1, new_labels == 1, c=1/(mult*(1 - p) + 1), lam=1/(mult*(1 - p) + 1))
         power_final = sum((q_val <= alpha) & (new_labels == 1))
         true_power[iterate] = power_final
 

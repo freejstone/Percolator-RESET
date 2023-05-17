@@ -53,6 +53,7 @@ def main():
     seed = None
     command_line = ' '.join(sys.argv)
     psm_level = True
+    p_init = 0.5
 
     # Parse the command line.
     sys.argv = sys.argv[1:]
@@ -143,6 +144,9 @@ def main():
         elif (next_arg == '--seed'):
             seed = int(sys.argv[0])
             sys.argv = sys.argv[1:]
+        elif (next_arg == '--p_init'):
+            p_init = int(sys.argv[0])
+            sys.argv = sys.argv[1:]
         elif (next_arg == '--psm_level'):
             if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
                 psm_level = True
@@ -185,28 +189,23 @@ def main():
             peptide_list_df.rename(columns = {'decoy(s)':'decoy'}, inplace = True)
         peptide_list_df.drop_duplicates(inplace = True)
         peptide_list_dfs.append(peptide_list_df)
-
-    if 'decoy(s)' in peptide_list_df.columns:
-        peptide_list_df.rename(columns={'decoy(s)': 'decoy'}, inplace=True)
-
-    peptide_list_df.drop_duplicates(inplace=True)
-
-    #do PSM level competition
-    open_df = spf.PSM_level(open_dfs[0], open_dfs[1], top = 1)
-
-    #removing flanking aa
-    open_df['Peptide'] = open_df['Peptide'].apply(
-        lambda x: x[2:(len(x) - 2)])
-    
-    df_extra_decoy = open_dfs[2].copy()
-    
-    #remove repeated decoy peptides
-    df_extra_decoy['Peptide'] = df_extra_decoy['Peptide'].apply(
-        lambda x: x[2:(len(x) - 2)])
-    df_extra_decoy = df_extra_decoy[~(df_extra_decoy.Peptide.isin(peptide_list_dfs[0].decoy))]
-    df_extra_decoy = spf.PSM_level(df_extra_decoy.copy(), None, top = 1) #this just gets the top 1 PSM
     
     if psm_level:
+        
+        #do PSM level competition
+        open_df = spf.PSM_level(open_dfs[0], open_dfs[1], top = 1)
+
+        #removing flanking aa
+        open_df['Peptide'] = open_df['Peptide'].apply(
+            lambda x: x[2:(len(x) - 2)])
+        
+        df_extra_decoy = open_dfs[2].copy()
+        
+        #remove repeated decoy peptides
+        df_extra_decoy['Peptide'] = df_extra_decoy['Peptide'].apply(
+            lambda x: x[2:(len(x) - 2)])
+        df_extra_decoy = df_extra_decoy[~(df_extra_decoy.Peptide.isin(peptide_list_dfs[0].decoy))]
+        df_extra_decoy = spf.PSM_level(df_extra_decoy.copy(), None, top = 1) #this just gets the top 1 PSM
         
         #get pseudo PSM level competition
         df_pseudo, df_all = spf.pseudo_PSM_level(open_df.copy(), df_extra_decoy.copy(), 1, precursor_bin_width)
@@ -236,49 +235,37 @@ def main():
         logging.info("%s peptides discovered at %s FDR." %(obs_power, FDR_threshold))
 
     else:
-          
-        #doing peptide level competition and get bins/freq
-        open_df = spf.peptide_level(
-            open_df.copy(), peptide_list_dfs[0].copy(), precursor_bin_width=precursor_bin_width, keep_original = True)
         
-        open_df = open_df.drop(remove, axis = 1, errors = 'ignore')
-        open_df['filename'] = 0
+        #do PSM level competition involving all PSMs
+        open_df = spf.PSM_level(open_dfs[0], open_dfs[1:], top = 1)
         
-        #doing peptide-level competition now
-        df_pseudo_target = open_df.copy()
-        df_pseudo_target['Label'] = 1        
-        df_pseudo_target['Peptide'] = df_pseudo_target['original_target']
-        df_pseudo_target = df_pseudo_target.drop('original_target', axis = 1)
-        df_extra_decoy['filename'] = 1
-        df_all = pd.concat([df_pseudo_target, df_extra_decoy])
+        #removing flanking aa
+        open_df['Peptide'] = open_df['Peptide'].apply(
+            lambda x: x[2:(len(x) - 2)])
         
-        open_df = open_df.drop('original_target', axis = 1)
+        #doing multi peptide level competition and get bins/freq for al
+        df_all = spf.peptide_level(
+            open_df.copy(), peptide_list_dfs.copy(), precursor_bin_width=precursor_bin_width)
         
-        df_pseudo, open_df = spf.peptide_level(df_all.copy(), peptide_list_dfs[1].copy(), keep_original = False, before = True, original_df = open_df.copy())
+        #do scale
+        df_all = spf.do_scale(df_all)
+
+        #create target-decoys at pseudolevel
+        train_all = df_all.loc[(df_all['Label']
+                                           == -1)].sample(frac=p_init).copy()
         
-        open_df = open_df.drop(remove, axis = 1, errors = 'ignore')
-        df_pseudo = df_pseudo.drop(remove, axis = 1, errors = 'ignore')
+        #do svm with
+        train_power, std_power, true_power, df_new, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
+            0.1, 1, 10], p=0.5, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 2)
         
-        df_pseudo, open_df = spf.do_scale(df_pseudo.copy(), open_df.copy())
-        
-        #Doing iterative PSM
-        train_power, std_power, true_power, real_df_peptide = spf.do_svm_extra(df_pseudo.copy(), open_df.copy(), folds=folds, Cs=[
-            0.1, 1, 10], total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
-        
-        #the new direction
-        real_df_peptide = real_df_peptide.sort_values(
+        df_new = df_new.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)
         
-        #get_qvals
         q_val = uf.TDC_flex_c(
-            real_df_peptide.Label == -1, real_df_peptide.Label == 1, c=1/2, lam=1/2)
+            df_new.Label == -1, df_new.Label == 1, c=1/(2 - p_init), lam=1/(2 - p_init))
         
-        real_df_peptide['q_vals'] = q_val
+        df_new['q_val'] = q_val
         
-        obs_power = sum((q_val <= FDR_threshold) & (real_df_peptide.Label == 1))
-
-        sys.stderr.write("%s peptides discovered at %s FDR. \n" %(obs_power, FDR_threshold))
-        logging.info("%s peptides discovered at %s FDR." %(obs_power, FDR_threshold))
    
     #write results
     if output_dir != './':
