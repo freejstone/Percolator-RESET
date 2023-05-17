@@ -93,10 +93,15 @@ def print_info(command_line, output_dir, file_root, overwrite, account_mods, sea
             logging.info("One of the search files does not exist.")
             sys.exit("One of the search files does not exist. \n")
     if search_file_narrow == None:
-        if (not os.path.isfile(search_file_open)):
-            logging.info("Open search file does not exist.")
-            sys.exit("Open search file does not exist. \n")
-#########################################################################################################
+        if type(search_file_open) == str:
+            if (not os.path.isfile(search_file_open)):
+                logging.info("Open search file does not exist.")
+                sys.exit("Open search file does not exist. \n")
+        else:
+            if any(not os.path.isfile(i) for i in search_file_open):
+                logging.info("One of the search files does not exist.")
+                sys.exit("One of the search files does not exist. \n")
+    #########################################################################################################
 
 
 def TDC_flex_c(decoy_wins, target_wins, BC1=1, c=1/2, lam=1/2):

@@ -165,7 +165,7 @@ def custom_accuracy(y, y_pred, alpha=0.01, p=0.5):
 #########################################################################################################
 
 
-def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, alpha=0.01):
+def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, alpha=0.01, p = 0.5):
     '''
     Parameters
     ----------
@@ -208,7 +208,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
         param_grid = dict(gamma=gamma_range, degree=degree, coef0=coef0_range,
                           class_weight=class_weight)
 
-    my_scorer = make_scorer(custom_accuracy, alpha=alpha,
+    my_scorer = make_scorer(custom_accuracy, alpha=alpha, p = p,
                             greater_is_better=True, needs_threshold=True)
 
     if kernel == 'linear':
@@ -1263,7 +1263,7 @@ def do_svm(df_all, train_decoys, folds=3, Cs=[0.01, 0.1, 1, 10], total_iter=10, 
         sys.stderr.write("iteration: %s.\n" % (iterate))
         #determining best direction with cross validation for parameter selection
         grid = train_cv(SVM_train_labels_iter, SVM_train_features_iter,
-                        folds=folds, Cs=Cs, kernel=kernel, degree=degree, alpha=train_alpha)
+                        folds=folds, Cs=Cs, kernel=kernel, degree=degree, alpha=train_alpha, p = p)
         best_train_power = max(grid.cv_results_['mean_test_score'])
         best_train_std = max(grid.cv_results_['std_test_score'])
         train_power[iterate] = best_train_power
@@ -1532,8 +1532,26 @@ def do_lda(df_all, train_decoys, total_iter=10, p=0.5, alpha=0.01, train_alpha=0
         #sys.stderr.write("Std trained power: %s.\n" % (best_train_std))
 
     #using the last new_idx to report the discoveries
-    real_df = real_df.loc[new_idx].reset_index(drop=True)
-    real_df_discoveries = real_df[(q_val <= alpha) & (new_labels == 1)]
+    real_df['SVM_score'] = new_scores
+    
+    if type(remove) == list:
+        train_decoys_test = train_decoys.drop(remove, axis=1, errors = 'ignore')
 
-    return(true_power, real_df_discoveries)
+    if 'filename' in train_decoys_test.columns:
+        train_decoys_test = train_decoys_test.drop(
+            ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+    else:
+        train_decoys_test = train_decoys_test.drop(
+            ['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+        
+    #Get rid of colinear features
+    sds = train_decoys_test.apply(np.std, axis = 0)
+    train_decoys_test = train_decoys_test[train_decoys_test.columns[sds != 0]]
+    
+    new_scores = grid.decision_function(train_decoys_test)
+    
+    train_decoys['SVM_score'] = new_scores
+
+
+    return(train_decoys, real_df)
     

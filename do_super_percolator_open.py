@@ -232,7 +232,7 @@ def main():
         train_all = pd.concat([train_decoys_above, train_below])
 
         train_power, std_power, true_power, df_new, train_all_new = spf.do_svm(df_above.copy(), train_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
+            0.1, 1, 10], p=p_init, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
         #df_new, train_decoys_new = do_lda(df_above, train_all, total_iter=3, p=0.5, alpha=0.01, train_alpha=0.01, remove=remove, top_positive=False, qda=False)
         
         df_new['trained'] = 0  # has not been trained
@@ -253,7 +253,7 @@ def main():
         ), df_new[(q_val <= FDR_grid[1]) & (df_new.Label == -1)].sample(frac=p_next).copy()])
 
         train_power_next, std_power_next, true_power_next, df_new, train_all_new = spf.do_svm(df_new.copy(), train_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_next, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
+            0.1, 1, 10], p=p_next, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
         
         df_new['trained'] = 0  # has not been trained
         train_all_new['trained'] = 1  # has been trained
@@ -271,7 +271,7 @@ def main():
             est_FDP = (V + 1)*c/((1 - lam)*max(R, 1))
             
             while est_FDP > 0.01:
-                indxs = df_new[(df_new['trained'] == 0)].index[-5:]
+                indxs = df_new[(df_new['trained'] == 0)].index[-2:]
     
                 spec_ids = df_new.SpecId.loc[indxs]
     
@@ -298,6 +298,9 @@ def main():
                 c = 1/(2 - p_next)
                 lam = 1/(2 - p_next)
                 est_FDP = (V + 1)*c/((1 - lam)*max(R, 1))
+                
+                sys.stderr.write("estimated FDP is %s. \n" %(est_FDP))
+                logging.info("estimated FDP is %s." %(est_FDP))
             
             p_init = p_next
         
@@ -322,6 +325,9 @@ def main():
 
         train_power, std_power, true_power, df_new, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
             0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
+        
+        df_new = df_new.sort_values(
+            by='SVM_score', ascending=False).reset_index(drop=True)
         
         q_val = uf.TDC_flex_c(
             df_new.Label == -1, df_new.Label == 1, c=1/(2 - p_init), lam=1/(2 - p_init))
