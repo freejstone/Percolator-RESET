@@ -255,16 +255,16 @@ def main():
                                            == -1)].sample(frac=p_init).copy()
         
         #do svm with
-        train_power, std_power, true_power, df_new, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=0.5, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 2)
+        train_power, std_power, true_power, real_df_peptide, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
+            0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 2)
         
-        df_new = df_new.sort_values(
+        real_df_peptide = real_df_peptide.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)
         
         q_val = uf.TDC_flex_c(
-            df_new.Label == -1, df_new.Label == 1, c=1/(2 - p_init), lam=1/(2 - p_init))
+            real_df_peptide.Label == -1, real_df_peptide.Label == 1, c=1/(2*(1 - p_init) + 1), lam=1/(2*(1 - p_init) + 1))
         
-        df_new['q_val'] = q_val
+        real_df_peptide['q_val'] = q_val
         
    
     #write results
