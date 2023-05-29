@@ -56,6 +56,7 @@ def main():
     iterate = False
     FDR_grid = [0.25, 0.1]
     p_init = 0.25
+    open_narrow = 'open'
 
     # Parse the command line.
     sys.argv = sys.argv[1:]
@@ -170,11 +171,17 @@ def main():
         elif (next_arg == "--p_init"):
             p_init = float(sys.argv[0])
             sys.argv = sys.argv[1:]
+        elif (next_arg == "--open_narrow"):
+            if str(sys.argv[0]) in ['open', 'narrow']:
+                open_narrow = str(sys.argv[0])
+            else:
+                sys.stderr.write("Invalid argument for --open_narrow")
+            sys.argv = sys.argv[1:]
         else:
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
     if (len(sys.argv) == 2):
-        search_file_open = sys.argv[0]
+        search_file = sys.argv[0]
         td_list = sys.argv[1]
     else:
         #sys.stderr.write('Version: ' + str(__version__) + " \n")
@@ -187,13 +194,17 @@ def main():
         np.random.seed(seed)
 
     #print meta information, checking directory and printing warnings
-    uf.print_info(command_line, output_dir, file_root, overwrite,
-                  account_mods, None, search_file_open)
+    if open_narrow == 'open':
+        uf.print_info(command_line, output_dir, file_root, overwrite,
+                      account_mods, None, search_file)
+    elif open_narrow == 'narrow':
+        uf.print_info(command_line, output_dir, file_root, overwrite,
+                      account_mods, search_file, None)
 
     sys.stderr.write("Reading in search file and peptide list. \n")
     logging.info("Reading in search file and peptide list.")
 
-    open_df = uf.read_pin(search_file_open)  # reading
+    data_df = uf.read_pin(search_file)  # reading
     peptide_list_df = pd.read_table(td_list)  # reading
 
     if 'decoy(s)' in peptide_list_df.columns:
@@ -202,12 +213,12 @@ def main():
     peptide_list_df.drop_duplicates(inplace=True)
 
     #removing flanking aa
-    open_df['Peptide'] = open_df['Peptide'].apply(
+    data_df['Peptide'] = data_df['Peptide'].apply(
         lambda x: x[2:(len(x) - 2)])
 
     #doing peptide level competition and get bins/freq
     df_all = spf.peptide_level(
-        open_df.copy(), peptide_list_df.copy(), precursor_bin_width=precursor_bin_width)
+        data_df.copy(), peptide_list_df.copy(), precursor_bin_width=precursor_bin_width, open_narrow = open_narrow)
     
     if stratified:
         #get second sample proportion
