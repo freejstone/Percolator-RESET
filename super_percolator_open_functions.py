@@ -8,6 +8,7 @@ Created on Tue May  9 19:13:19 2023
 super_percolator main functions
 """
 
+import re
 import numpy as np
 import pandas as pd
 import random
@@ -125,7 +126,7 @@ def pseudo_PSM_level(df_all, df_extra_decoy, top, precursor_bin_width):
 #########################################################################################################
 
 
-def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep_original = False, before = False, original_df = None):
+def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep_original = False, before = False, original_df = None, open_narrow = 'open'):
     '''
     Parameters
     ----------
@@ -235,7 +236,13 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep
             df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
                 drop=True)  # sort by score
         
-        df_all = df_all.drop_duplicates(subset='original_target')
+        if open_narrow:
+            df_all = df_all.drop_duplicates(subset='original_target')
+        else:
+            mod_mass = df_all.Peptide.apply(lambda x: re.findall('\d+', x))
+            df_all['mod_mass'] = mod_mass.apply(lambda x: sum([float(i) for i in x]))
+            df_all = df_all.drop_duplicates(subset = ['original_target', 'mod_mass'])
+            df_all.drop('mod_mass', axis = 1, inplace = True)
         if not keep_original:
             df_all.drop(['original_target', 'enzInt'], axis=1, inplace=True)
             if type(original_df) != type(None):
@@ -243,7 +250,14 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep
             
     else:
         
-        df_all = df_all.drop_duplicates(subset='original_target')
+        if open_narrow:
+            df_all = df_all.drop_duplicates(subset='original_target')
+        else:
+            mod_mass = df_all.Peptide.apply(lambda x: re.findall('\d+', x))
+            df_all['mod_mass'] = mod_mass.apply(lambda x: sum([float(i) for i in x]))
+            df_all = df_all.drop_duplicates(subset = ['original_target', 'mod_mass'])
+            df_all.drop('mod_mass', axis = 1, inplace = True)
+            
         if not keep_original:
             df_all.drop(['original_target', 'enzInt'], axis=1, inplace=True, errors = 'ignore')
             if type(original_df) != type(None):
