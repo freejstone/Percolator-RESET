@@ -65,21 +65,33 @@ def PSM_level(target_file, decoy_file, top=1):
         target_file['filename'] = 0
         df = pd.concat([target_file, decoy_file_combined])
     else:
-        df = pd.concat([target_file, decoy_file])  # combine
-
+        df = pd.concat([decoy_file, target_file])  # combine
+        
+    df['rank'] = df['SpecId'].apply(
+        lambda x: int(x[-1]))
+    
+    df = df[df['rank'] == 1].reset_index(drop = True)
+        
     df = df.sample(frac=1).reset_index(drop=True)  # randomly shuffle
     
-    df = df.sort_values(by='TailorScore', ascending=False).reset_index(
+    df = df.sort_values(by='XCorr', ascending=False).reset_index(
         drop=True)  # sort by score
     
-    df['rank'] = df.groupby(["ScanNr", "ExpMass"])["TailorScore"].rank("first", ascending=False)
+    df['Charge'] = df['SpecId'].apply(
+        lambda x: int(x[-3]))
+    
+    df.drop_duplicates(["ScanNr", "ExpMass", "Charge"])
+    
+    df['rank'] = df.groupby(["ScanNr", "ExpMass", "Charge"])["XCorr"].rank("first", ascending=False)
 
-    df = df[df['rank'] <= top]  # get top PSMs for each scan
+    #df = df[df['rank'] <= top]  # get top PSMs for each scan
     
     df['rank'] = df['rank'].astype(int)
 
     df['SpecId'] = df.apply(lambda x: '_'.join(x.SpecId.split(
         '_')[:-1]) + '_' + str(x['rank']), axis=1)  # split specID
+    
+    df.drop('Charge', axis = 1, inplace = True)
 
     return(df.reset_index(drop=True))
 #########################################################################################################
@@ -160,7 +172,7 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep
             lambda x: int(x[-1]))
         df_all = df_all[df_all['rank'] == 1].reset_index(drop = True)
 
-    df_all = df_all.sample(frac=1)  # break ties randomly
+    df_all = df_all.sample(frac=1).reset_index(drop = True)  # break ties randomly
     
     if 'SVM_score' in df_all.columns:
         df_all = df_all.sort_values(by='SVM_score', ascending=False).reset_index(
