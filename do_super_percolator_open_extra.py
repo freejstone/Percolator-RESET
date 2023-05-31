@@ -273,7 +273,7 @@ def main():
     else:
         
         #do PSM level competition involving all PSMs
-        data_df = PSM_level(data_dfs[0], data_dfs[1], top = 1)
+        data_df = spf.PSM_level(data_dfs[0], data_dfs[1:], top = 1)
         
         #data_df = uf.read_pin('crux-output/open_50.make-pin.pin')
         
@@ -284,7 +284,7 @@ def main():
         
         #doing multi peptide level competition and get bins/freq for al
         df_all = spf.peptide_level(
-            data_df.copy(), peptide_list_dfs[0].copy(), precursor_bin_width=precursor_bin_width, open_narrow = open_narrow)
+            data_df.copy(), peptide_list_dfs.copy(), precursor_bin_width=precursor_bin_width, open_narrow = open_narrow)
         
         #do scale
         df_all = spf.do_scale(df_all)
@@ -295,7 +295,7 @@ def main():
         
         #do svm with
         train_power, std_power, true_power, real_df_peptide, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 1)
+            0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 2)
         
         real_df_peptide = real_df_peptide.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)

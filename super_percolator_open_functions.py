@@ -66,33 +66,49 @@ def PSM_level(target_file, decoy_file, top=1):
         df = pd.concat([target_file, decoy_file_combined])
     else:
         df = pd.concat([decoy_file, target_file])  # combine
-        
-    df['rank'] = df['SpecId'].apply(
-        lambda x: int(x[-1]))
-    
-    df = df[df['rank'] == 1].reset_index(drop = True)
-        
+   
     df = df.sample(frac=1).reset_index(drop=True)  # randomly shuffle
-    
-    df = df.sort_values(by='XCorr', ascending=False).reset_index(
-        drop=True)  # sort by score
     
     df['Charge'] = df['SpecId'].apply(
         lambda x: int(x[-3]))
+        
+    #Fix up lnNumSP
+    logging.info("Fixing up lnNumSP.")
+    sys.stderr.write("Fixing up lnNumSP.\n")
+    values_x = df.loc[df['Label'] == 1].groupby(["ScanNr", "ExpMass", "Charge"])['lnNumSP'].first()
+    values_y = df.loc[df['Label'] == -1].groupby(["ScanNr", "ExpMass", "Charge"])['lnNumSP'].unique()
+    values_y = values_y.apply(lambda x: np.log(sum(np.exp(x))))
+    values_all = np.log(np.exp(values_x) + np.exp(values_y))
+    df['lnNumSP'] = df.apply(lambda x: values_all[(x['ScanNr'], x['ExpMass'], x['Charge'])], axis=1)
+        
+    df = df.sort_values(by='XCorr', ascending=False).reset_index(
+        drop=True)  # sort by score
     
     df.drop_duplicates(["ScanNr", "ExpMass", "Charge"])
     
     df['rank'] = df.groupby(["ScanNr", "ExpMass", "Charge"])["XCorr"].rank("first", ascending=False)
 
-    #df = df[df['rank'] <= top]  # get top PSMs for each scan
-    
     df['rank'] = df['rank'].astype(int)
 
+    df = df[df['rank'] <= 5]  # get top PSMs for each scan
+    
     df['SpecId'] = df.apply(lambda x: '_'.join(x.SpecId.split(
         '_')[:-1]) + '_' + str(x['rank']), axis=1)  # split specID
     
-    df.drop('Charge', axis = 1, inplace = True)
-
+    #Fix up deltlCn
+    logging.info("Fixing up deltlCn.")
+    sys.stderr.write("Fixing up deltlCn.\n")
+    LastValue = df.groupby(["ScanNr", "ExpMass", "Charge"])['XCorr'].transform('last')
+    df['deltLCn'] = (df['XCorr'] - LastValue)/np.maximum(df['XCorr'], 1)
+    
+    #Fix up deltCn
+    logging.info("Fixing up deltCn.")
+    sys.stderr.write("Fixing up deltCn.\n")
+    df['SubsequentValue'] = df.groupby(["ScanNr", "ExpMass", "Charge"])['XCorr'].shift(-1)
+    df['deltCn'] = df['XCorr'].sub(df['SubsequentValue'], fill_value=0)/np.maximum(df['XCorr'], 1)
+    
+    df.drop(['Charge', 'SubsequentValue'], axis = 1, inplace = True)
+    
     return(df.reset_index(drop=True))
 #########################################################################################################
 
@@ -248,7 +264,7 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep
             df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
                 drop=True)  # sort by score
         
-        if open_narrow:
+        if open_narrow == 'open':
             df_all = df_all.drop_duplicates(subset='original_target')
         else:
             mod_mass = df_all.Peptide.apply(lambda x: re.findall('\d+', x))
@@ -262,7 +278,7 @@ def peptide_level(df_all, peptide_list_df, precursor_bin_width=1.0005079/4, keep
             
     else:
         
-        if open_narrow:
+        if open_narrow == 'open':
             df_all = df_all.drop_duplicates(subset='original_target')
         else:
             mod_mass = df_all.Peptide.apply(lambda x: re.findall('\d+', x))
