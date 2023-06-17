@@ -211,7 +211,7 @@ def main():
             peptide_list_df.rename(columns = {'decoy(s)':'decoy'}, inplace = True)
         peptide_list_df.drop_duplicates(inplace = True)
         peptide_list_dfs.append(peptide_list_df)
-    
+            
     if psm_level:
         
         #do PSM level competition
@@ -271,6 +271,10 @@ def main():
         logging.info("%s peptides discovered at %s FDR." %(obs_power, FDR_threshold))
 
     else:
+        #get fraction of repeats
+        n_repeats = sum(peptide_list_dfs[1].decoy.isin(peptide_list_dfs[0].decoy))
+        frac_repeats = n_repeats/peptide_list_dfs[0].shape[0]
+        
         
         #do PSM level competition involving all PSMs
         data_df = spf.PSM_level(data_dfs[0], data_dfs[1:], top = 1)
@@ -291,11 +295,11 @@ def main():
 
         #create target-decoys at pseudolevel
         train_all = df_all.loc[(df_all['Label']
-                                           == -1)].sample(frac=p_init).copy()
+                                           == -1)].sample(frac=p_init*(1 - frac_repeats)).copy()
         
         #do svm with
         train_power, std_power, true_power, real_df_peptide, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 2)
+            0.1, 1, 10], p=p_init*(1 - frac_repeats), total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False, mult = 2)
         
         real_df_peptide = real_df_peptide.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)

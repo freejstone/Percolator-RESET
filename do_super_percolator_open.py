@@ -335,7 +335,7 @@ def main():
                                            == -1)].sample(frac=p_init).copy()
 
         train_power, std_power, true_power, df_new, train_all_new = spf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=10, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
+            0.1, 1, 10], p=p_init, total_iter=total_iter, kernel=kernel, alpha=FDR_threshold, train_alpha=train_FDR_threshold, degree=degree, remove=remove, top_positive=False)
         
         df_new = df_new.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)

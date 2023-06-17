@@ -81,3 +81,67 @@ for (dataset in datasets) {
 
 
 write.csv(df_all, paste('percolator_all.csv', sep = ''))
+
+
+##################################################################################################################################
+
+df_all = data.frame(matrix(0, ncol = 4))
+colnames(df_all) = c("Threshold", "power_narrow", "dcy_indx", "PXID")
+alpha_vec = seq(0.01, 0.05, by = 0.001)
+d_vec = c(0:9)
+count_all = 1
+set.seed(1)
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+
+for (dataset in datasets) {
+  print(dataset)
+  for (d in d_vec) {
+    print(d)
+    txt = paste('datasets', '/', dataset, '/index-', d, '/tide-index.peptides.txt', sep = "")
+    peptide_list = read.delim(txt)
+    
+    txt_decoy = paste('datasets', '/', dataset, '/crux-output/narrow_1_', d, '.percolator.decoy.psms.txt', sep = "")
+    txt_target = paste('datasets', '/', dataset, '/crux-output/narrow_1_', d, '.percolator.target.psms.txt', sep = "")
+    
+    targets = read.delim(txt_target)
+    targets$target.decoy = 'target'
+    
+    decoys = read.delim(txt_decoy)
+    decoys$target.decoy = 'decoy'
+    
+    targets$original_target_sequence = substring(targets$peptide, 3, nchar(targets$peptide) - 2)
+    mass = ((regmatches(targets$original_target_sequence,
+                                        gregexpr("[[:digit:]]+\\.*[[:digit:]]*",targets$original_target_sequence))))
+    mass = lapply(mass, as.numeric)
+    mass = lapply(mass, sum)
+    mass = unlist(mass)
+    targets$original_target_sequence = gsub('[0-9]+|\\.|\\[|\\]', '', targets$original_target_sequence)
+    targets$original_target_sequence = paste(targets$original_target_sequence, mass)
+    
+    decoys$original_target_sequence = substring(decoys$peptide, 3, nchar(decoys$peptide) - 2)
+    mass = ((regmatches(decoys$original_target_sequence,
+                                        gregexpr("[[:digit:]]+\\.*[[:digit:]]*",decoys$original_target_sequence))))
+    mass = lapply(mass, as.numeric)
+    mass = lapply(mass, sum)
+    mass = unlist(mass)
+    decoys$original_target_sequence = gsub('[0-9]+|\\.|\\[|\\]', '', decoys$original_target_sequence)
+    decoys$original_target_sequence = peptide_list$target[match(decoys$original_target_sequence, peptide_list$decoy)]
+    decoys$original_target_sequence = paste(decoys$original_target_sequence, mass)
+    
+    target_decoys = rbind(targets, decoys)
+    
+    df_narrow = do_TDC(target_decoys)
+    
+    q_vals_narrow = TDC_flex_c(df_narrow$labels == -1, df_narrow$labels == 1)
+    
+    ##############################################################################################################################
+    
+    for (alpha in alpha_vec){
+      df_all[count_all, ] <- c(alpha, sum(q_vals_narrow <= alpha & df_narrow$labels == 1), d, dataset)
+      count_all <- count_all + 1
+    }
+  }
+}
+
+
+write.csv(df_all, paste('results/percolator_narrow_all.csv', sep = ''))
