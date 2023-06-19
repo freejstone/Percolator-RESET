@@ -93,12 +93,15 @@ def main():
     if type(seed) == int:
         random.seed(seed)
         np.random.seed(seed)
+        
+        sys.stderr.write("Using seed: %s. \n" %seed)
+        logging.info("Using seed: %s." %seed)
     
     #print meta information, checking directory and printing warnings
     uf.print_info(command_line, output_dir, file_root, overwrite, search_files)
     
-    sys.stderr.write("Reading in search file and peptide list. \n")
-    logging.info("Reading in search file and peptide list.")
+    sys.stderr.write("Reading in search file(s) and peptide list(s). \n")
+    logging.info("Reading in search file(s) and peptide list(s).")
     
     data_dfs = []
     peptide_list_dfs = []
@@ -126,68 +129,20 @@ def main():
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop = True)
-        PSMs.drop('rank', axis = 1, inplace = True)
+        PSMs.drop(['enzInt'], axis=1, inplace=True, errors = 'ignore')
+        
         #applying scaling
-        df_all, PSMs = pf.do_scale(df_all, PSMs)
+        df_all_scale, scale = pf.do_scale(df_all.copy())
 
         #create target-decoys at pseudolevel
-        train_all = df_all.loc[(df_all['Label']
+        train_all = df_all_scale.loc[(df_all_scale['Label']
                                            == -1)].sample(frac=p_init).copy()
         
-        train_power, std_power, true_power, df_new, train_all_new, model = pf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
+        #do SVM
+        train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
             0.1, 1, 10], p=p_init, total_iter=total_iter,alpha=FDR_threshold, train_alpha=train_FDR_threshold)
         
-        q_val = uf.TDC_flex_c(
-            df_new.Label == -1, df_new.Label == 1, c=1/(2 - p_init), lam=1/(2 - p_init))
-        
-        df_new['q_val'] = q_val
-        
-        df_new = df_new.loc[:, df_new.q_val <= FDR_threshold]
-        
-        if df_new.shape[0] > 0:            
-            sys.stderr.write("Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
-            logging.info("Reporting all PSMs within each mass-cluster associated to a discovered peptide. ")
-            df_extra = uf.create_cluster(PSMs.copy(), df_new.loc[df_new.Label == 1, 'peptides'].copy(), model, isolation_window)
-            df_extra['originally_discovered'] = False
-            df_new['originally_discovered'] = True
-            
-            min_score = min(df_new.SVM_score)
-            df_extra['above_threshold'] = False
-            df_extra.loc[df_extra.SVM_score >= min_score, 'above_threshold'] = True
-            df_new['above_threshold'] = True
-            
-            df_final = pd.concat([df_new, df_extra])
-            
-            df_final.drop_duplicates(['SpecId', 'Peptide'])
-            
-            #write results
-            if output_dir != './':
-                if not os.path.isdir(output_dir):
-                    os.mkdir(output_dir)
-                df_new.to_csv(output_dir + "/" + file_root +
-                                   ".peptides.txt", header=True, index=False, sep='\t')
-                df_final.to_csv(output_dir + "/" + file_root +
-                                   ".psms.txt", header=True, index=False, sep='\t')
-
-            else:
-                df_new.to_csv(output_dir + "/" + file_root +
-                                   ".peptides.txt", header=True, index=False, sep='\t')
-            
-        else:
-            sys.stderr.write("No peptides discovered. \n")
-            logging.info("No peptides discovered. ")
-            
-            #write results
-            if output_dir != './':
-                if not os.path.isdir(output_dir):
-                    os.mkdir(output_dir)
-                df_new.to_csv(output_dir + "/" + file_root +
-                                   ".peptides.txt", header=True, index=False, sep='\t')
-
-            else:
-                df_new.to_csv(output_dir + "/" + file_root +
-                                   ".peptides.txt", header=True, index=False, sep='\t')
-            
+        df_new = df_new.loc[df_new.q_val <= FDR_threshold]
         
     else:
         #do PSM level competition involving all PSMs
@@ -199,43 +154,70 @@ def main():
             data_df.copy(), peptide_list_dfs.copy())
         
         #do scale
-        df_all, PSMs = pf.do_scale(df_all, PSMs)
+        df_all_scale, scale = pf.do_scale(df_all.copy())
 
         #create target-decoys at pseudolevel
-        train_all = df_all.loc[((df_all['Label']
-                                           == -1) & (df_all.filename == 0))].sample(frac=p_init).copy()
-        train_all = pd.concat([train_all, df_all.loc[((df_all['Label']
-                                           == -1) & (df_all.filename == 1))]])
+        train_all = df_all_scale.loc[((df_all_scale['Label']
+                                           == -1) & (df_all_scale.filename == 0))].sample(frac=p_init).copy()
+        train_all = pd.concat([train_all, df_all_scale.loc[((df_all_scale['Label']
+                                           == -1) & (df_all_scale.filename == 1))]])
         
-        #do svm with
-        train_power, std_power, true_power, df_new, train_all_new, model = pf.do_svm(df_all.copy(), train_all.copy(), folds=folds, Cs=[
+        #do svm
+        train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
             0.1, 1, 10], p=(1 + p_init)/2, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult = 2)
         
-        df_new = df_new.sort_values(
-            by='SVM_score', ascending=False).reset_index(drop=True)
+        df_new = df_new.loc[df_new.q_val <= FDR_threshold]
         
-        q_val = uf.TDC_flex_c(
-            df_new.Label == -1, df_new.Label == 1, c=1/(2 - p_init), lam=1/(2 - p_init))
+    if df_new.shape[0] > 0:            
+        sys.stderr.write("Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
+        logging.info("Reporting all PSMs within each mass-cluster associated to a discovered peptide. ")
+        originally_discovered = df_new.loc[df_new.Label == 1, 'Peptide'].copy()
+        originally_discovered = originally_discovered.str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True)
+        df_extra = create_cluster(PSMs.copy(), scale, originally_discovered, model, isolation_window, columns_trained)
+        df_extra['originally_discovered'] = False
+        df_new['originally_discovered'] = True
         
-        df_new['q_val'] = q_val
+        min_score = min(df_new.SVM_score)
+        df_extra['above_threshold'] = False
+        df_extra.loc[df_extra.SVM_score >= min_score, 'above_threshold'] = True
+        df_new['above_threshold'] = True
         
-        df_new = df_new.loc[:, df_new.q_val <= FDR_threshold]
+        df_final = pd.concat([df_new, df_extra])
         
-        if df_new.shape[0] > 0:            
-            sys.stderr.write("Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
-            logging.info("Reporting all PSMs within each mass-cluster associated to a discovered peptide. ")
-            df_extra = uf.create_cluster(PSMs.copy(), df_new.loc[df_new.Label == 1, 'peptides'].copy(), model, isolation_window)
-            df_extra['originally_discovered'] = False
-            df_new['originally_discovered'] = True
-            
-            min_score = min(df_new.SVM_score)
-            df_extra['above_threshold'] = False
-            df_extra.loc[df_extra.SVM_score >= min_score, 'above_threshold'] = True
-            df_new['above_threshold'] = True
-            
-            df_final = pd.concat([df_new, df_extra])
-            
-            df_final.drop_duplicates(['SpecId', 'Peptide'])
+        df_final = df_final.drop_duplicates(['SpecId', 'filename', 'Peptide']) #remove duplicate values from df_extra
+        #Note it can be the case that a different PSM matched to the same exact peptide with the same delta mass appears multiple times in the auxilary list
+        #This can be due to the fact that when accounting for the SVM score, the SVM score of the auxilary PSM is higher than the original PSM's SVM score.
+        #I don't think this is a problem really.
+        
+        #write results
+        if output_dir != './':
+            if not os.path.isdir(output_dir):
+                os.mkdir(output_dir)
+            df_new.to_csv(output_dir + "/" + file_root +
+                               ".peptides.txt", header=True, index=False, sep='\t')
+            df_final.to_csv(output_dir + "/" + file_root +
+                               ".psms.txt", header=True, index=False, sep='\t')
+
+        else:
+            df_new.to_csv(output_dir + "/" + file_root +
+                               ".peptides.txt", header=True, index=False, sep='\t')
+    else:
+        
+        sys.stderr.write("No peptides discovered. \n")
+        logging.info("No peptides discovered. ")
+        
+        #write results
+        if output_dir != './':
+            if not os.path.isdir(output_dir):
+                os.mkdir(output_dir)
+            df_new.to_csv(output_dir + "/" + file_root +
+                               ".peptides.txt", header=True, index=False, sep='\t')
+
+        else:
+            df_new.to_csv(output_dir + "/" + file_root +
+                               ".peptides.txt", header=True, index=False, sep='\t')
+        
     
     end_time = time.time()
 

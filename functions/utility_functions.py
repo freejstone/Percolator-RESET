@@ -13,11 +13,8 @@ import datetime
 import platform
 import numpy as np
 import pandas as pd
-import multiprocessing
 import logging
-import peptides
 import sys
-from tqdm import tqdm
 import gzip
 #########################################################################################################
 
@@ -157,23 +154,41 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
 #########################################################################################################
 
 
-def create_cluster(target_decoys, original_discoveries, model, isolation_window):
+def create_cluster(target_decoys, scale, original_discoveries, model, isolation_window, columns_trained):
+    '''
     
-    #get target_decoy column
+
+    Parameters
+    ----------
+    target_decoys : Pandas dataframe
+        top 1 PSMs, scaled.
+    scale : StandardScaler
+        For scaling and unscaling target_decoys
+    original_discoveries : Pandas series
+        Discovered peptides, modifications removed.
+    model : SVM.SVC()
+        SVM model.
+    isolation_window : List
+        Left/Right Isolation Window.
+
+    Returns
+    -------
+    None.
+
+    '''
+    #get targets
     targets = target_decoys[target_decoys['Label'] == 1].copy()
     
     targets['original_target_sequence'] = targets['Peptide'].str.replace(
         "\\[|\\]|\\.|\\d+", "", regex=True)
-    
-    
+        
     targets = targets[targets['original_target_sequence'].isin(
         original_discoveries)].copy()
 
-    #create a cluster column
-    targets = targets.sample(frac=1).reset_index(drop=True)
+    targets = targets.sample(frac=1)
     
     #getting charge
-    targets['Charge'] = targets['SpecId'].apply(
+    targets['charge'] = targets['SpecId'].apply(
         lambda x: int(x[-3]))
     
     #original target_sequence already handles whether it is at the sequence level or modified-sequence level
@@ -186,7 +201,11 @@ def create_cluster(target_decoys, original_discoveries, model, isolation_window)
     targets["cluster"] = targets.groupby(
         'original_target_sequence', group_keys=False).condition.cumsum()
     
-    new_scores = model.decision_function(targets)
+    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
+    
+    scaled_target.loc[:,:] = scale.transform(scaled_target)
+    
+    new_scores = model.decision_function(scaled_target[scaled_target.columns[scaled_target.columns.isin(columns_trained)]])
     
     targets['SVM_score'] = new_scores
     
@@ -194,6 +213,8 @@ def create_cluster(target_decoys, original_discoveries, model, isolation_window)
         
     #take best PSM according to cluster and sequence with modification
     targets = targets.drop_duplicates(subset=['Peptide', 'cluster'])
+    
+    targets = targets.drop(['charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence'], axis = 1)
 
     return(targets)
 

@@ -87,6 +87,16 @@ for (dataset in datasets){
   }
 }
 
+command = "crux percolator --overwrite T --tdc F --only-psms T --output-dir datasets/PXID/crux-output --fileroot narrow_1_IND datasets/PXID/crux-output/narrow_1_IND.make-pin.pin"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
 
 command = "python do_super_percolator.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.005 --output_dir datasets/PXID/crux-output --file_root IND_top_positive datasets/PXID/crux-output/narrow_5IND.make-pin.pin datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
 datasets = list.files(path = 'datasets', pattern = 'PXD')
@@ -179,6 +189,178 @@ for (dataset in datasets){
   for (i in 0:9){
     command_temp = gsub('PXID', dataset, command)
     command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+
+
+command = "python do_super_percolator_open.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.01 --stratified T --iterative T --output_dir datasets/PXID/crux-output --file_root stratified_iterative_IND datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.01 --stratified T --iterative F --output_dir datasets/PXID/crux-output --file_root stratified_IND datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open.py --seed IND --overwrite T --top_positive T --train_FDR_threshold 0.01 --stratified F --iterative F --output_dir datasets/PXID/crux-output --file_root no_stratified_IND datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open.py --seed IND --overwrite T --open_narrow narrow --top_positive T --train_FDR_threshold 0.01 --stratified F --iterative F --output_dir datasets/PXID/crux-output --file_root no_stratified_narrow_IND datasets/PXID/crux-output/narrow_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.01 --p_init 0.25 --stratified F --iterative F --output_dir datasets/PXID/crux-output --file_root no_stratified_pinit_025_IND datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+
+command = "python do_super_percolator_open.py --seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.01 --p_init 0.75 --stratified F --iterative F --output_dir datasets/PXID/crux-output --file_root no_stratified_pinit_075_IND datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+
+
+command = "python do_super_percolator_open_extra.py --psm_level T --seed 0 --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_PSM_level datasets/PXID/crux-output/open_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/open_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/open_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 10, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+
+
+command = "python do_super_percolator_open_extra.py --psm_level F --total_iter 5 --seed IND --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_pep_level datasets/PXID/crux-output/open_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/open_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/open_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 10, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open.py ---remove bins,pi_0,min_tailor_score,min_xcorr_score -seed 0 --overwrite T --top_positive T --train_FDR_threshold 0.01 --stratified T --iterative F --output_dir datasets/PXID/crux-output --file_root stratified_freq_IND datasets/PXID/crux-output/open_5IND.make-pin.pin datasets/PXID/index-IND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+
+command = "python do_super_percolator_open_extra.py --psm_level F --p_init 0.75 --total_iter 10 --seed IND --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_pep_level_075 datasets/PXID/crux-output/open_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/open_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/open_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 10, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open_extra.py --psm_level F --p_init 0.5 --total_iter 10 --seed 0 --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_pep_level_050 datasets/PXID/crux-output/open_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/open_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/open_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 9, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open_extra.py --psm_level F --open_narrow narrow --p_init 0.75 --total_iter 10 --seed IND --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_pep_level_narrow_075 datasets/PXID/crux-output/narrow_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/narrow_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/narrow_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 10, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+command = "python do_super_percolator_open_extra.py --psm_level T --seed 0 --keep_hidden F --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_PSM_level datasets/PXID/crux-output/open_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/open_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/open_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+datasets = datasets[!grepl('PXD019354', datasets)]
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 9, command_temp)
+    command_all = c(command_all, command_temp)
+  }
+}
+
+
+command = "python do_super_percolator_open_extra.py --psm_level T --open_narrow narrow --seed 0 --keep_hidden F --overwrite T --top_positive F --train_FDR_threshold 0.01 --output_dir datasets/PXID/crux-output --file_root extra_decoy_IND_PSM_level_narrow datasets/PXID/crux-output/narrow_5IND_sep.tide-search.target.pin,datasets/PXID/crux-output/narrow_5IND_sep.tide-search.decoy.pin,datasets/PXID/crux-output/narrow_5JND_sep.tide-search.decoy.pin datasets/PXID/index-IND/tide-index.peptides.txt,datasets/PXID/index-JND/tide-index.peptides.txt"
+datasets = list.files(path = 'datasets', pattern = 'PXD')
+datasets = datasets[!grepl('PXD019354', datasets)]
+command_all = c()
+for (dataset in datasets){
+  for (i in 0:9){
+    command_temp = gsub('PXID', dataset, command)
+    command_temp = gsub('IND', i, command_temp)
+    command_temp = gsub('JND', (i + 1) %% 9, command_temp)
     command_all = c(command_all, command_temp)
   }
 }
