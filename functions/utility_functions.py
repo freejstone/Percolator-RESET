@@ -209,7 +209,10 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     
     targets['SVM_score'] = new_scores
     
-    targets = targets.sort_values(by=['SVM_score'], ascending=False)
+    if 'TailorScore' in targets.columns:
+        targets = targets.sort_values(by=['TailorScore'], ascending=False)
+    else:
+        targets = targets.sort_values(by=['XCorr'], ascending=False)
         
     #take best PSM according to cluster and sequence with modification
     targets = targets.drop_duplicates(subset=['Peptide', 'cluster'])

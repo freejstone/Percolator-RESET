@@ -192,9 +192,6 @@ def main():
         df_final = pd.concat([df_new, df_extra])
         
         df_final = df_final.drop_duplicates(['SpecId', 'filename', 'Peptide']) #remove duplicate values from df_extra
-        #Note it can be the case that a different PSM matched to the same exact peptide with the same delta mass appears multiple times in the auxilary list
-        #This can be due to the fact that when accounting for the SVM score, the SVM score of the auxilary PSM is higher than the original PSM's SVM score.
-        #I don't think this is a problem really.
         
         #write results
         if output_dir != './':
