@@ -149,6 +149,12 @@ def main():
         data_df = pf.PSM_level(data_dfs[0], data_dfs[1:], top = 1)
         PSMs = data_df.copy()
         
+        PSMs =  data_dfs[0].copy()
+        PSMs['rank'] = PSMs['SpecId'].apply(
+            lambda x: int(x[-1]))
+        PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop = True)
+        PSMs.drop(['enzInt'], axis=1, inplace=True, errors = 'ignore')
+        
         #doing multi peptide level competition and get bins/freq for al
         df_all = pf.peptide_level(
             data_df.copy(), peptide_list_dfs.copy())
@@ -174,7 +180,7 @@ def main():
         originally_discovered = df_new.loc[df_new.Label == 1, 'Peptide'].copy()
         originally_discovered = originally_discovered.str.replace(
             "\\[|\\]|\\.|\\d+", "", regex=True)
-        df_extra = create_cluster(PSMs.copy(), scale, originally_discovered, model, isolation_window, columns_trained)
+        df_extra = uf.create_cluster(PSMs.copy(), scale, originally_discovered, model, isolation_window, columns_trained)
         df_extra['originally_discovered'] = False
         df_new['originally_discovered'] = True
         
@@ -194,9 +200,9 @@ def main():
         if output_dir != './':
             if not os.path.isdir(output_dir):
                 os.mkdir(output_dir)
-            df_new.to_csv(output_dir + "/" + file_root +
+            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
                                ".peptides.txt", header=True, index=False, sep='\t')
-            df_final.to_csv(output_dir + "/" + file_root +
+            df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
                                ".psms.txt", header=True, index=False, sep='\t')
 
         else:

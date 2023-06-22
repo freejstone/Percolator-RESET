@@ -98,6 +98,8 @@ def PSM_level(target_file, decoy_file, top=1):
     
     df.drop(['Charge', 'SubsequentValue'], axis = 1, inplace = True)
     
+    df = df[df['rank'] <= top]
+    
     return(df.reset_index(drop=True))
 #########################################################################################################
 
