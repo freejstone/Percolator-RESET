@@ -39,6 +39,7 @@ def main():
     train_FDR_threshold = 0.01
     output_dir = '.'
     file_root = 'FDR_percolator'
+    remove = ['enzInt']
     overwrite = False
     seed = int(datetime.now().timestamp()) #importantly the seed needs be random and not set at some value
     p_init = 0.5
@@ -67,6 +68,18 @@ def main():
             sys.argv = sys.argv[1:]
         elif (next_arg == "--file_root"):
             file_root = str(sys.argv[0])
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--remove"):
+            remove = str(sys.argv[0]).split(',')
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--overwrite"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                overwrite = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                overwrite = False
+            else:
+                sys.stderr.write("Invalid argument for --overwrite")
+                sys.exit(1)
             sys.argv = sys.argv[1:]
         elif (next_arg == '--seed'):
             seed = int(sys.argv[0])
@@ -123,13 +136,13 @@ def main():
     if single_decoy:
         #doing peptide level competition
         df_all = pf.peptide_level(
-            data_dfs[0].copy(), peptide_list_dfs[0].copy())
+            data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove)
         
         PSMs =  data_dfs[0].copy()
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop = True)
-        PSMs.drop(['enzInt'], axis=1, inplace=True, errors = 'ignore')
+        PSMs.drop(remove, axis=1, inplace=True, errors = 'ignore')
         
         #applying scaling
         df_all_scale, scale = pf.do_scale(df_all.copy())
@@ -153,11 +166,11 @@ def main():
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop = True)
-        PSMs.drop(['enzInt'], axis=1, inplace=True, errors = 'ignore')
+        PSMs.drop(remove, axis=1, inplace=True, errors = 'ignore')
         
         #doing multi peptide level competition and get bins/freq for al
         df_all = pf.peptide_level(
-            data_df.copy(), peptide_list_dfs.copy())
+            data_df.copy(), peptide_list_dfs.copy(), remove)
         
         #do scale
         df_all_scale, scale = pf.do_scale(df_all.copy())

@@ -103,7 +103,7 @@ def PSM_level(target_file, decoy_file, top=1):
     return(df.reset_index(drop=True))
 #########################################################################################################
 
-def peptide_level(df_all, peptide_list_df):
+def peptide_level(df_all, peptide_list_df, remove):
     '''
 
     Parameters
@@ -174,7 +174,8 @@ def peptide_level(df_all, peptide_list_df):
     
     sys.stderr.write("Dropping enzInt feature. \n")
     logging.info("Doing enzInt feature.")
-    df_all.drop(['original_target', 'enzInt'], axis=1, inplace=True, errors = 'ignore')
+    df_all.drop(['original_target'], axis=1, inplace=True, errors = 'ignore')
+    df_all.drop(remove, axis=1, inplace=True, errors = 'ignore')
        
     return(df_all)
 #########################################################################################################
