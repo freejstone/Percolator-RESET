@@ -42,7 +42,7 @@ def main():
     remove = ['enzInt']
     overwrite = False
     seed = int(datetime.now().timestamp()) #importantly the seed needs be random and not set at some value
-    p_init = 0.5
+    p_init_default = True
     isolation_window = [2, 2]
     command_line = ' '.join(sys.argv)
     
@@ -85,6 +85,7 @@ def main():
             seed = int(sys.argv[0])
             sys.argv = sys.argv[1:]
         elif (next_arg == '--p_init'):
+            p_init_default = False
             seed = float(sys.argv[0])
             sys.argv = sys.argv[1:]
         elif (next_arg == "--isolation_window"):
@@ -134,6 +135,10 @@ def main():
     single_decoy = (len(search_files) == 1)
     
     if single_decoy:
+        #removing low complexity targets that do not produce a decoy
+        low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna()]
+        data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(low_complex_targets)].reset_index(drop = True)
+    
         #doing peptide level competition
         df_all = pf.peptide_level(
             data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove)
@@ -146,6 +151,9 @@ def main():
         
         #applying scaling
         df_all_scale, scale = pf.do_scale(df_all.copy())
+        
+        if p_init_default:
+            p_init = 0.5
 
         #create target-decoys at pseudolevel
         train_all = df_all_scale.loc[(df_all_scale['Label']
@@ -158,6 +166,10 @@ def main():
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
         
     else:
+        #get fraction of repeats
+        #repeated_inds = peptide_list_dfs[1].decoy.isin(peptide_list_dfs[0].decoy)
+        #repeated_peps = pd.concat([peptide_list_dfs[0].target[repeated_inds], peptide_list_dfs[0].decoy[repeated_inds]])
+        
         #do PSM level competition involving all PSMs
         data_df = pf.PSM_level(data_dfs[0], data_dfs[1:], top = 1)
         PSMs = data_df.copy()
@@ -174,16 +186,17 @@ def main():
         
         #do scale
         df_all_scale, scale = pf.do_scale(df_all.copy())
+        
+        if p_init_default:
+            p_init = 0.75
 
         #create target-decoys at pseudolevel
-        train_all = df_all_scale.loc[((df_all_scale['Label']
-                                           == -1) & (df_all_scale.filename == 0))].sample(frac=p_init).copy()
-        train_all = pd.concat([train_all, df_all_scale.loc[((df_all_scale['Label']
-                                           == -1) & (df_all_scale.filename == 1))]])
+        train_all = df_all_scale.loc[(df_all_scale['Label']
+                                           == -1)].sample(frac=p_init).copy()
         
         #do svm
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=(1 + p_init)/2, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult = 2)
+            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult = 2)
         
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
         
