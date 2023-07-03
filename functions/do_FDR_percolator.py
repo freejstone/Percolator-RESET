@@ -43,6 +43,7 @@ def main():
     overwrite = False
     seed = int(datetime.now().timestamp()) #importantly the seed needs be random and not set at some value
     p_init_default = True
+    get_psms = False
     isolation_window = [2, 2]
     command_line = ' '.join(sys.argv)
     
@@ -87,6 +88,15 @@ def main():
         elif (next_arg == '--p_init'):
             p_init_default = False
             seed = float(sys.argv[0])
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--get_psms"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                get_psms = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                get_psms = False
+            else:
+                sys.stderr.write("Invalid argument for --get_psms")
+                sys.exit(1)
             sys.argv = sys.argv[1:]
         elif (next_arg == "--isolation_window"):
             isolation_window = str(sys.argv[0]).split(',')
@@ -138,6 +148,9 @@ def main():
         #removing low complexity targets that do not produce a decoy
         low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna()]
         data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(low_complex_targets)].reset_index(drop = True)
+        
+        
+        
     
         #doing peptide level competition
         df_all = pf.peptide_level(
@@ -157,7 +170,7 @@ def main():
 
         #create target-decoys at pseudolevel
         train_all = df_all_scale.loc[(df_all_scale['Label']
-                                           == -1)].sample(frac=p_init).copy()
+                                          == -1)].sample(frac=p_init).copy()
         
         #do SVM
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
@@ -166,10 +179,13 @@ def main():
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
         
     else:
-        #get fraction of repeats
-        #repeated_inds = peptide_list_dfs[1].decoy.isin(peptide_list_dfs[0].decoy)
-        #repeated_peps = pd.concat([peptide_list_dfs[0].target[repeated_inds], peptide_list_dfs[0].decoy[repeated_inds]])
+        #removing low complexity targets that do not produce a decoy
+        low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna()]
+        data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(low_complex_targets)].reset_index(drop = True)
         
+        repeated_inds = peptide_list_dfs[1].decoy.isin(peptide_list_dfs[0].decoy)
+        repeated_peps = pd.concat([peptide_list_dfs[0].target[repeated_inds], peptide_list_dfs[0].decoy[repeated_inds]])
+     
         #do PSM level competition involving all PSMs
         data_df = pf.PSM_level(data_dfs[0], data_dfs[1:], top = 1)
         PSMs = data_df.copy()
@@ -194,13 +210,14 @@ def main():
         train_all = df_all_scale.loc[(df_all_scale['Label']
                                            == -1)].sample(frac=p_init).copy()
         
+        
         #do svm
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult = 2)
+            0.1, 1, 10], p=0.5, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult = 1)
         
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
         
-    if df_new.shape[0] > 0:            
+    if df_new.shape[0] > 0 and get_psms:            
         sys.stderr.write("Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
         logging.info("Reporting all PSMs within each mass-cluster associated to a discovered peptide. ")
         originally_discovered = df_new.loc[df_new.Label == 1, 'Peptide'].copy()
@@ -220,33 +237,35 @@ def main():
         df_final = df_final.drop_duplicates(['SpecId', 'filename', 'Peptide']) #remove duplicate values from df_extra
         
         #write results
-        if output_dir != './':
+        if output_dir != '.':
             if not os.path.isdir(output_dir):
                 os.mkdir(output_dir)
             df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
                                ".peptides.txt", header=True, index=False, sep='\t')
             df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
                                ".psms.txt", header=True, index=False, sep='\t')
+                
 
         else:
             df_new.to_csv(output_dir + "/" + file_root +
                                ".peptides.txt", header=True, index=False, sep='\t')
+            df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
+                               ".psms.txt", header=True, index=False, sep='\t')
     else:
         
         sys.stderr.write("No peptides discovered. \n")
         logging.info("No peptides discovered. ")
         
         #write results
-        if output_dir != './':
+        if output_dir != '.':
             if not os.path.isdir(output_dir):
                 os.mkdir(output_dir)
-            df_new.to_csv(output_dir + "/" + file_root +
+            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
                                ".peptides.txt", header=True, index=False, sep='\t')
 
         else:
             df_new.to_csv(output_dir + "/" + file_root +
                                ".peptides.txt", header=True, index=False, sep='\t')
-        
     
     end_time = time.time()
 
