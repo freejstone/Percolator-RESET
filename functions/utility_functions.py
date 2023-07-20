@@ -25,17 +25,19 @@ def print_info(command_line, output_dir, file_root, overwrite, search_files):
         if os.path.exists(path=output_dir + "/" + file_root + ".log.txt") and overwrite:
             os.remove(output_dir + "/" + file_root + ".log.txt")
             logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
-                                level=logging.DEBUG, format='%(levelname)s: %(message)s')
+                                level=logging.DEBUG, format='%(levelname)s: %(message)s', force=True)
         elif os.path.exists(path=output_dir + "/" + file_root + ".log.txt") and not overwrite:
             log_file = output_dir + "/" + file_root + ".log.txt"
             sys.exit("The file %s already exists and cannot be overwritten. Use --overwrite T to replace or choose a different output file name. \n" % (log_file))
         else:
+            sys.stderr.write("check")
             logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
-                                level=logging.DEBUG, format='%(levelname)s: %(message)s')
+                                level=logging.DEBUG, format='%(levelname)s: %(message)s', force=True)
     else:
+        sys.stderr.write("check1")
         os.mkdir(output_dir)
         logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
-                            level=logging.DEBUG, format='%(levelname)s: %(message)s')
+                            level=logging.DEBUG, format='%(levelname)s: %(message)s', force=True)
 
     #print CPU info
     logging.info('CPU: ' + str(platform.platform()))
@@ -165,22 +167,24 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     scale : StandardScaler
         For scaling and unscaling target_decoys
     original_discoveries : Pandas series
-        Discovered peptides, modifications removed.
+        Discovered peptides.
     model : SVM.SVC()
         SVM model.
     isolation_window : List
         Left/Right Isolation Window.
-
+    columns_trained: List
+        Names of the columns during SVM training
     Returns
     -------
-    None.
+    target PSMs associated to the discovered peptides that are the highest scoring in their associated mass bin.
 
     '''
     #get targets
     targets = target_decoys[target_decoys['Label'] == 1].copy()
     
-    targets['original_target_sequence'] = targets['Peptide'].str.replace(
-        "\\[|\\]|\\.|\\d+", "", regex=True)
+    targets['original_target_sequence'] = targets['Peptide']
+    #targets['original_target_sequence'] = targets['Peptide'].str.replace(
+    #    "\\[|\\]|\\.|\\d+", "", regex=True)
         
     targets = targets[targets['original_target_sequence'].isin(
         original_discoveries)].copy()
@@ -191,7 +195,7 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     targets['charge'] = targets['SpecId'].apply(
         lambda x: int(x[-3]))
     
-    #original target_sequence already handles whether it is at the sequence level or modified-sequence level
+    #clustering the PSMs matched to the same peptide according to mass
     targets = targets.sort_values(
         by='ExpMass', ascending=True).reset_index(drop=True)
     targets["mass_plus"] = targets.groupby('original_target_sequence', group_keys=False).apply(
