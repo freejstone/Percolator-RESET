@@ -68,6 +68,7 @@ def main():
     output_dir = '.'
     file_root = 'FDR_percolator'
     remove = ['enzInt']
+    peptide_level = False
     overwrite = False
     # importantly the seed needs be random and not set at some value
     seed = int(datetime.now().timestamp())
@@ -101,6 +102,15 @@ def main():
             sys.argv = sys.argv[1:]
         elif (next_arg == "--remove"):
             remove = str(sys.argv[0]).split(',')
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--peptide_level"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                peptide_level = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                peptide_level = False
+            else:
+                sys.stderr.write("Invalid argument for --overwrite")
+                sys.exit(1)
             sys.argv = sys.argv[1:]
         elif (next_arg == "--overwrite"):
             if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
