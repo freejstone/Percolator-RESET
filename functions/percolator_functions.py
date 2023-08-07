@@ -285,8 +285,8 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
             grid = GridSearchCV(svm.LinearSVC(max_iter=1e7), param_grid=param_grid,
                                 cv=folds, scoring=my_scorer)
         else:
-            grid = GridSearchCV(svm.SVC(), param_grid=param_grid,
-                                cv=folds, scoring=my_scorer)
+            grid = RandomizedSearchCV(svm.SVC(kernel=kernel), param_distributions=param_grid, n_iter=10,
+                                      cv=folds, scoring=my_scorer)
         grid.fit(df, labels)
     
     while max(grid.cv_results_['mean_test_score']) == 0:
@@ -298,7 +298,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
             grid = GridSearchCV(svm.LinearSVC(max_iter=1e7), param_grid=param_grid,
                                 cv=folds, scoring=my_scorer)
         else:
-            grid = RandomizedSearchCV(svm.SVC(), param_distributions=param_grid, n_iter=10,
+            grid = RandomizedSearchCV(svm.SVC(kernel=kernel), param_distributions=param_grid, n_iter=10,
                                       cv=folds, scoring=my_scorer)
 
         grid.fit(df, labels)
