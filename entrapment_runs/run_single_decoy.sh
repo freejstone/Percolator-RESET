@@ -61,7 +61,7 @@ section2() {
 section3() {
     sizes=('075')
     values=($(seq 0 99))
-    repeats=($(seq 0 4))
+    repeats=($(seq 0 3))
 
 
     for size in "${sizes[@]}"; do
@@ -88,7 +88,7 @@ section3() {
 section4() {
     sizes=('full')
     values=($(seq 0 99))
-    repeats=($(seq 0 4))
+    repeats=($(seq 0 3))
 
 
     for size in "${sizes[@]}"; do

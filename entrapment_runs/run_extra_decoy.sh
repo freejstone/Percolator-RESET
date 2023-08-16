@@ -121,7 +121,7 @@ section4() {
 
 section5() {
     sizes=('full')
-    values=($(seq 100 199))
+    values=($(seq 0 99))
     repeats=($(seq 0 3))
 
     for size in "${sizes[@]}"; do
