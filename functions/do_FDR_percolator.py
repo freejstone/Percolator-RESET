@@ -210,8 +210,12 @@ def main():
             p_init = 0.5
 
         #create target-decoys at pseudolevel
+        rand_indxs = np.random.choice([True, False], replace = True, size = sum((df_all_scale['Label']
+                                      == -1)), p = [p_init, 1 - p_init])
+        
         train_all = df_all_scale.loc[(df_all_scale['Label']
-                                      == -1)].sample(frac=p_init).copy()
+                                      == -1)].copy()
+        train_all = train_all.loc[rand_indxs].copy()
 
         #do SVM
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
@@ -282,8 +286,12 @@ def main():
             p_init = 0.5
 
         #create decoys at pseudolevel
+        rand_indxs = np.random.choice([True, False], replace = True, size = sum((df_all_scale['Label']
+                                      == -1)), p = [p_init, 1 - p_init])
+        
         train_all = df_all_scale.loc[(df_all_scale['Label']
-                                      == -1)].sample(frac=p_init).copy()
+                                      == -1)].copy()
+        train_all = train_all.loc[rand_indxs].copy()
 
         #do svm
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[

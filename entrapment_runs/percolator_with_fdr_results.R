@@ -3,7 +3,7 @@
 #parameters
 sizes = c('full', 'half', '075', '025')
 alpha_vec = seq(0.01, 0.1, by = 0.01)
-d_vec = c(0:499)
+d_vec = c(0:199)
 count = 1
 
 df_all = data.frame(Threshold = numeric(),
@@ -16,7 +16,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_single_decoy_', size, '_', d, '.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_single_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -31,7 +31,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_open_entrapments.csv')
+write.csv(df_all, 'results/percolator_with_fdr_open_entrapments_ind.csv')
 ####################################################################################
 
 #percolator with fdr entrapments
@@ -39,7 +39,7 @@ write.csv(df_all, 'results/percolator_with_fdr_open_entrapments.csv')
 #parameters
 sizes = c('full', 'half', '075', '025')
 alpha_vec = seq(0.01, 0.1, by = 0.01)
-d_vec = c(0:499)
+d_vec = c(0:199)
 count = 1
 
 df_all = data.frame(Threshold = numeric(),
@@ -52,7 +52,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_single_decoy_', size, '_', d, '.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_single_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -67,7 +67,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments.csv')
+write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments_ind.csv')
 ####################################################################################
 
 
@@ -78,7 +78,7 @@ write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments.csv')
 #parameters
 sizes = c('full', 'half', '075', '025')
 alpha_vec = seq(0.01, 0.1, by = 0.01)
-d_vec = c(0:499)
+d_vec = c(0:199)
 count = 1
 
 df_all = data.frame(Threshold = numeric(),
@@ -91,7 +91,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_extra_decoy_', size, '_', d, '.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_extra_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -106,7 +106,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments.csv')
+write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments_ind.csv')
 ####################################################################################
 
 #percolator with fdr entrapments
@@ -114,7 +114,7 @@ write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments.csv')
 #parameters
 sizes = c('full', '075', 'half', '025')
 alpha_vec = seq(0.01, 0.1, by = 0.01)
-d_vec = c(0:499)
+d_vec = c(0:199)
 count = 1
 
 df_all = data.frame(Threshold = numeric(),
@@ -127,7 +127,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_extra_decoy_', size, '_', d, '.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_extra_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -142,7 +142,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_narrow_extra_entrapments.csv')
+write.csv(df_all, 'results/percolator_with_fdr_narrow_extra_entrapments_ind.csv')
 ####################################################################################
 
 
