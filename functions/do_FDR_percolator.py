@@ -249,7 +249,6 @@ def main():
         
         #do PSM level competition involving all PSMs
         data_df = pf.PSM_level(data_dfs[0].copy(), data_dfs[1:].copy(), top=1)
-        PSMs = data_df.copy()
         
         sys.stderr.write("Reading in peptide list(s). \n")
         logging.info("Reading in peptide list(s).")
@@ -264,12 +263,10 @@ def main():
         #removing low complexity targets that do not produce a decoy
         low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
         )]
-        data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(
+        data_df = data_df[~data_df.Peptide.isin(
             low_complex_targets)].reset_index(drop=True)
 
-        
-
-        PSMs = data_dfs[0].copy()
+        PSMs = data_df.copy()
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
