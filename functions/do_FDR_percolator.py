@@ -39,6 +39,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
   Options:
       
     --FDR_threshold <float> The FDR threshold. Default = 0.01.
+    --narrow <T/F> A boolean determining whether the search files used a narrow or open precursor tolerance. Default = T. 
     --folds <int> The number of folds for determining the class weights. Default = 3.
     --total_iter <int> The number of SVM training iterations. Default = 5.
     --train_FDR_threshold <float> The FDR threshold used to define positive training set. Default = 0.01.
@@ -62,12 +63,13 @@ def main():
 
     # Set default values for parameters.
     FDR_threshold = 0.01
+    narrow = True
     folds = 3
     total_iter = 5
     train_FDR_threshold = 0.01
     output_dir = '.'
     file_root = 'FDR_percolator'
-    remove = ['enzInt']
+    remove = ['enzInt', 'ExpMass', 'CalcMass']
     overwrite = False
     # importantly the seed needs be random and not set at some value
     seed = int(datetime.now().timestamp())
@@ -83,6 +85,15 @@ def main():
         sys.argv = sys.argv[1:]
         if (next_arg == "--FDR_threshold"):
             FDR_threshold = float(sys.argv[0])
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--narrow"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                narrow = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                narrow = False
+            else:
+                sys.stderr.write("Invalid argument for --narrow")
+                sys.exit(1)
             sys.argv = sys.argv[1:]
         elif (next_arg == "--folds"):
             folds = int(sys.argv[0])
@@ -147,11 +158,11 @@ def main():
         random.seed(seed)
         np.random.seed(seed)
 
-        sys.stderr.write("Using seed: %s. \n" % seed)
-        logging.info("Using seed: %s." % seed)
-
     #print meta information, checking directory and printing warnings
     uf.print_info(command_line, output_dir, file_root, overwrite, search_files)
+
+    sys.stderr.write("Using seed: %s. \n" % seed)
+    logging.info("Using seed: %s." % seed)
 
     single_decoy = (len(search_files) == 1)
 
@@ -183,7 +194,7 @@ def main():
 
         #doing peptide level competition
         df_all = pf.peptide_level(
-            data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove)
+            data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow)
 
         PSMs = data_dfs[0].copy()
         PSMs['rank'] = PSMs['SpecId'].apply(
@@ -262,7 +273,7 @@ def main():
 
         #doing multi peptide level competition
         df_all = pf.peptide_level(
-            data_df.copy(), peptide_list_dfs.copy(), remove)
+            data_df.copy(), peptide_list_dfs.copy(), remove, narrow)
 
         #do scale
         df_all_scale, scale = pf.do_scale(df_all.copy())

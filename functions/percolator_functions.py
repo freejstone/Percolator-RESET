@@ -13,6 +13,7 @@ import pandas as pd
 import utility_functions as uf
 import logging
 import sys
+import re
 from sklearn import svm
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import GridSearchCV
@@ -120,7 +121,7 @@ def PSM_level(target_file, decoy_file, top=1):
 #########################################################################################################
 
 
-def peptide_level(df_all, peptide_list_df, remove):
+def peptide_level(df_all, peptide_list_df, remove, narrow):
     '''
 
     Parameters
@@ -131,6 +132,8 @@ def peptide_level(df_all, peptide_list_df, remove):
         Tide-index target-decoy peptide pairs.
     remove : List
         A list of features to remove from consideration after peptide-level competition.
+    open_narrow : str
+        A string indicating whether the search files are from an open or narrow search.
     Returns
     -------
     PSMs that remain after target-decoy peptide level competition.
@@ -160,8 +163,8 @@ def peptide_level(df_all, peptide_list_df, remove):
     # getting best score for each Peptide
     df_all = df_all.drop_duplicates(subset='Peptide')
 
-    sys.stderr.write("Doing peptide level competition. \n")
-    logging.info("Doing peptide level competition.")
+    sys.stderr.write("Doing peptide-stem level competition. \n")
+    logging.info("Doing peptide-stem level competition.")
 
     if type(peptide_list_df) == list:
         df_all['original_target'] = df_all['Peptide']
@@ -183,15 +186,28 @@ def peptide_level(df_all, peptide_list_df, remove):
         df_all['original_target'] = df_all['Peptide']
         df_all.loc[df_all.Label == -1,
                    'original_target'] = df_all_sub['original_target'].tolist()
+    
+    
+    if narrow:  
+        def extract_and_sum_floats(text):
+            floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
+            float_sum = sum(float(val) for val in floats)
+            return(float_sum)
+        
+        df_all['total_mod_mass'] = df_all['original_target'].apply(extract_and_sum_floats)
+        df_all['original_target'] = df_all['original_target'].str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True)
+        df_all = df_all.drop_duplicates(subset=['original_target','total_mod_mass'])
+        
+    else:
+        df_all['original_target'] = df_all['original_target'].str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True)
+        df_all = df_all.drop_duplicates(subset='original_target')
+        
 
-    df_all['original_target'] = df_all['original_target'].str.replace(
-        "\\[|\\]|\\.|\\d+", "", regex=True)
-
-    df_all = df_all.drop_duplicates(subset='original_target')
-
-    sys.stderr.write("Dropping enzInt feature. \n")
-    logging.info("Doing enzInt feature.")
-    df_all.drop(['original_target'], axis=1, inplace=True, errors='ignore')
+    sys.stderr.write("Dropping the features: %s. \n" %(', '.join(remove)))
+    logging.info("Dropping the features: %s." %(', '.join(remove)))
+    df_all.drop(['original_target', 'total_mod_mass'], axis=1, inplace=True, errors='ignore')
     df_all.drop(remove, axis=1, inplace=True, errors='ignore')
 
     return(df_all)
