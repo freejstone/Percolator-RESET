@@ -21,7 +21,7 @@ A note to Lukas: for the development in C, please refer to the link [here](https
 * run_extra_decoy.sh: Conducts Percolator-RESET+ files from on files from narrow_search_sep.sh and open_search_sep.sh.
 * run_single_decoy_var.sh: Conducts Percolator-RESET files from on files from narrow_search.sh and open_search.sh, with varying seeds.
 * run_extra_decoy_var.sh: Conducts Percolator-RESET+ files from on files from narrow_search_sep.sh and open_search_sep.sh, with varying seeds.
-* percolator_summary.R: Does peptide-level competition for Percolator.
+* percolator_summary.R: Does peptide/stem-level competition for Percolator.
 
 For files under entrapment_runs/:
 * combine_fasta.R: Prepares the in-sample and entrapment sequences with decreasing in-sample proportion (100\%, 75\%, 50\%, 25\%).
@@ -32,5 +32,5 @@ For files under entrapment_runs/:
 * tide-search-sep-open.sh: Runs separate open search for each of the databases given by tide-index-trypsin.sh.
 * fix_enzit_tide.R: Selects the top 1 PSM and removes the EnzInt feature for subsequent use by Percolator.
 * percolator.sh: Conducts Percolator on search files from tide-search.sh and tide-search-open.sh.
-* percolator_results.R: Does peptide-level competition for Percolator.
+* percolator_results.R: Does peptide/stem-level competition for Percolator.
 * percolator_with_fdr_results.R: Summarises results from our method Percolator RESET.
