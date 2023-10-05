@@ -32,5 +32,7 @@ For files under entrapment_runs/:
 * tide-search-sep-open.sh: Runs separate open search for each of the databases given by tide-index-trypsin.sh.
 * fix_enzit_tide.R: Selects the top 1 PSM and removes the EnzInt feature for subsequent use by Percolator.
 * percolator.sh: Conducts Percolator on search files from tide-search.sh and tide-search-open.sh.
+* run_single_decoy.sh: Conducts Percolator-RESET files from on files from tide-search.sh and tide-search-open.sh.
+* run_extra_decoy.sh: Conducts Percolator-RESET+ files from on files from tide-search.sh and tide-search-open.sh.
 * percolator_results.R: Does peptide/stem-level competition for Percolator.
 * percolator_with_fdr_results.R: Summarises results from our method Percolator RESET.
