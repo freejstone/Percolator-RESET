@@ -214,6 +214,11 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
             "\\[|\\]|\\.|\\d+", "", regex=True).apply(sort_string)
         
         if narrow:
+            def extract_and_sum_floats(text):
+                floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
+                float_sum = sum(float(val) for val in floats)
+                return(float_sum)
+            
             df_all['total_mod_mass'] = df_all['Peptide'].apply(extract_and_sum_floats)
             
             # Create a new Series that counts duplicates based on columns
