@@ -76,8 +76,8 @@ def main():
     p_init_default = True
     get_psms = False
     isolation_window = [2, 2]
-    command_line = ' '.join(sys.argv)
     pair = False
+    command_line = ' '.join(sys.argv)
 
     # Parse the command line.
     sys.argv = sys.argv[1:]
@@ -143,6 +143,15 @@ def main():
             isolation_window = str(sys.argv[0]).split(',')
             isolation_window = [float(c) for c in isolation_window]
             sys.argv = sys.argv[1:]
+        elif (next_arg == "--pair"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                pair = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                pair = False
+            else:
+                sys.stderr.write("Invalid argument for --pair")
+                sys.exit(1)
+            sys.argv = sys.argv[1:]
         else:
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
@@ -195,7 +204,7 @@ def main():
 
         #doing peptide level competition
         df_all = pf.peptide_level(
-            data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow)
+            data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow, pair)
 
         PSMs = data_dfs[0].copy()
         PSMs['rank'] = PSMs['SpecId'].apply(
@@ -274,7 +283,7 @@ def main():
 
         #doing multi peptide level competition
         df_all = pf.peptide_level(
-            data_df.copy(), peptide_list_dfs.copy(), remove, narrow)
+            data_df.copy(), peptide_list_dfs.copy(), remove, narrow, pair)
 
         #do scale
         df_all_scale, scale = pf.do_scale(df_all.copy())

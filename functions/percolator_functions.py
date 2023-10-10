@@ -121,7 +121,7 @@ def PSM_level(target_file, decoy_file, top=1):
 #########################################################################################################
 
 
-def peptide_level(df_all, peptide_list_df, remove, narrow):
+def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
     '''
 
     Parameters
@@ -165,49 +165,71 @@ def peptide_level(df_all, peptide_list_df, remove, narrow):
 
     sys.stderr.write("Doing peptide-stem level competition. \n")
     logging.info("Doing peptide-stem level competition.")
-
-    if type(peptide_list_df) == list:
-        df_all['original_target'] = df_all['Peptide']
-        for i in range(len(peptide_list_df)):
-            df_all_sub = df_all[(df_all.Label == -1) &
-                                (df_all.filename == i)].copy()
-            peptide_list_df[i].rename(
+    
+    if not pair:
+        if type(peptide_list_df) == list:
+            df_all['original_target'] = df_all['Peptide']
+            for i in range(len(peptide_list_df)):
+                df_all_sub = df_all[(df_all.Label == -1) &
+                                    (df_all.filename == i)].copy()
+                peptide_list_df[i].rename(
+                    columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
+                df_all_sub = df_all_sub.merge(
+                    peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
+                df_all.loc[(df_all.Label == -1) & (df_all.filename == i),
+                           'original_target'] = df_all_sub['original_target_y'].tolist()
+        else:
+            df_all_sub = df_all[df_all.Label == -1].copy()
+            peptide_list_df.rename(
                 columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
             df_all_sub = df_all_sub.merge(
-                peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
-            df_all.loc[(df_all.Label == -1) & (df_all.filename == i),
-                       'original_target'] = df_all_sub['original_target_y'].tolist()
+                peptide_list_df[['original_target', 'Peptide']], how='left', on='Peptide')
+            df_all['original_target'] = df_all['Peptide']
+            df_all.loc[df_all.Label == -1,
+                       'original_target'] = df_all_sub['original_target'].tolist()
+            
+        if narrow:  
+            def extract_and_sum_floats(text):
+                floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
+                float_sum = sum(float(val) for val in floats)
+                return(float_sum)
+            
+            df_all['total_mod_mass'] = df_all['original_target'].apply(extract_and_sum_floats)
+            df_all['original_target'] = df_all['original_target'].str.replace(
+                "\\[|\\]|\\.|\\d+", "", regex=True)
+            df_all = df_all.drop_duplicates(subset=['original_target','total_mod_mass'])
+            
+        else:
+            df_all['original_target'] = df_all['original_target'].str.replace(
+                "\\[|\\]|\\.|\\d+", "", regex=True)
+            df_all = df_all.drop_duplicates(subset='original_target')
+            
+    #completedly different protocol for pairing   
     else:
-        df_all_sub = df_all[df_all.Label == -1].copy()
-        peptide_list_df.rename(
-            columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
-        df_all_sub = df_all_sub.merge(
-            peptide_list_df[['original_target', 'Peptide']], how='left', on='Peptide')
-        df_all['original_target'] = df_all['Peptide']
-        df_all.loc[df_all.Label == -1,
-                   'original_target'] = df_all_sub['original_target'].tolist()
-    
-    
-    if narrow:  
-        def extract_and_sum_floats(text):
-            floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
-            float_sum = sum(float(val) for val in floats)
-            return(float_sum)
+        # Define a function to sort a string alphabetically
+        def sort_string(s):
+            return ''.join(sorted(s))
+
+        df_all['sorted_Peptide'] = df_all['Peptide'].str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True).apply(sort_string)
         
-        df_all['total_mod_mass'] = df_all['original_target'].apply(extract_and_sum_floats)
-        df_all['original_target'] = df_all['original_target'].str.replace(
-            "\\[|\\]|\\.|\\d+", "", regex=True)
-        df_all = df_all.drop_duplicates(subset=['original_target','total_mod_mass'])
-        
-    else:
-        df_all['original_target'] = df_all['original_target'].str.replace(
-            "\\[|\\]|\\.|\\d+", "", regex=True)
-        df_all = df_all.drop_duplicates(subset='original_target')
-        
+        if narrow:
+            df_all['total_mod_mass'] = df_all['Peptide'].apply(extract_and_sum_floats)
+            
+            # Create a new Series that counts duplicates based on columns
+            df_all['id'] = df_all.groupby(['sorted_Peptide', 'total_mod_mass', 'Label']).cumcount() + 1
+            
+            df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'total_mod_mass', 'id'])
+            
+        else:
+            # Create a new Series that counts duplicates based on columns
+            df_all['id'] = df_all.groupby(['sorted_Peptide', 'Label']).cumcount() + 1
+            
+            df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'id'])
 
     sys.stderr.write("Dropping the features: %s. \n" %(', '.join(remove)))
     logging.info("Dropping the features: %s." %(', '.join(remove)))
-    df_all.drop(['original_target', 'total_mod_mass'], axis=1, inplace=True, errors='ignore')
+    df_all.drop(['original_target', 'total_mod_mass', 'sorted_Peptide', 'id'], axis=1, inplace=True, errors='ignore')
     df_all.drop(remove, axis=1, inplace=True, errors='ignore')
 
     return(df_all)
