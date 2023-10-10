@@ -51,7 +51,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --p_init <float> The proportion of decoys to use as the informative decoy set. Default = 0.5
     --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
-    
+    --pair <T/F> A boolean determining whether target-decoy should be done using search file or not. Default = F.
     
 """
 
@@ -77,6 +77,7 @@ def main():
     get_psms = False
     isolation_window = [2, 2]
     command_line = ' '.join(sys.argv)
+    pair = False
 
     # Parse the command line.
     sys.argv = sys.argv[1:]
