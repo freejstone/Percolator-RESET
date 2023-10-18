@@ -206,6 +206,9 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
             
     #completedly different protocol for pairing   
     else:
+        df_all = df_all.sample(frac=1).reset_index(
+            drop=True)
+        
         # Define a function to sort a string alphabetically
         def sort_string(s):
             return ''.join(sorted(s))
@@ -224,11 +227,31 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
             # Create a new Series that counts duplicates based on columns
             df_all['id'] = df_all.groupby(['sorted_Peptide', 'total_mod_mass', 'Label']).cumcount() + 1
             
+            if 'SVM_score' in df_all.columns:
+                df_all = df_all.sort_values(by='SVM_score', ascending=False).reset_index(
+                    drop=True)  # sort by score
+            elif 'TailorScore' in df_all.columns:
+                df_all = df_all.sort_values(by='TailorScore', ascending=False).reset_index(
+                    drop=True)  # sort by score
+            else:
+                df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
+                    drop=True)  # sort by score
+            
             df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'total_mod_mass', 'id'])
             
         else:
             # Create a new Series that counts duplicates based on columns
             df_all['id'] = df_all.groupby(['sorted_Peptide', 'Label']).cumcount() + 1
+            
+            if 'SVM_score' in df_all.columns:
+                df_all = df_all.sort_values(by='SVM_score', ascending=False).reset_index(
+                    drop=True)  # sort by score
+            elif 'TailorScore' in df_all.columns:
+                df_all = df_all.sort_values(by='TailorScore', ascending=False).reset_index(
+                    drop=True)  # sort by score
+            else:
+                df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
+                    drop=True)  # sort by score
             
             df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'id'])
 
