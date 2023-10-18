@@ -339,7 +339,7 @@ def main():
                                                  ".psms.txt", header=True, index=False, sep='\t')
 
         else:
-            df_new.to_csv(output_dir + "/" + file_root +
+            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
                           ".peptides.txt", header=True, index=False, sep='\t')
             df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
                                                  ".psms.txt", header=True, index=False, sep='\t')
@@ -353,7 +353,7 @@ def main():
                                              ".peptides.txt", header=True, index=False, sep='\t')
 
         else:
-            df_new.to_csv(output_dir + "/" + file_root +
+            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
                           ".peptides.txt", header=True, index=False, sep='\t')
 
     end_time = time.time()
