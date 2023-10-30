@@ -69,7 +69,7 @@ def main():
     train_FDR_threshold = 0.01
     output_dir = '.'
     file_root = 'FDR_percolator'
-    remove = ['enzInt', 'ExpMass', 'CalcMass']
+    remove = ['enzInt']
     overwrite = False
     # importantly the seed needs be random and not set at some value
     seed = int(datetime.now().timestamp())

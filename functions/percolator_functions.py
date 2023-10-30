@@ -478,10 +478,10 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     SVM_train_labels = train_df['Label'].copy()
     if 'filename' in train_df.columns:
         SVM_train_features = train_df.drop(
-            ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
     else:
         SVM_train_features = train_df.drop(
-            ['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
 
     #Get rid of redundant features
     sds = SVM_train_features.apply(np.std, axis=0)
@@ -614,10 +614,10 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         real_labels = real_df['Label'].copy()
         if 'filename' in real_df.columns:
             real_df_test = real_df.drop(
-                ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+                ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
         else:
             real_df_test = real_df.drop(
-                ['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+                ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
 
         #Get rid of redundant features
         real_df_test = real_df_test[real_df_test.columns[real_df_test.columns.isin(
@@ -659,10 +659,10 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
 
     if 'filename' in train_all_test.columns:
         train_all_test = train_all_test.drop(
-            ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
     else:
         train_all_test = train_all_test.drop(
-            ['SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
 
     #Get rid of redundant features
     train_all_test = train_all_test[train_all_test.columns[train_all_test.columns.isin(
