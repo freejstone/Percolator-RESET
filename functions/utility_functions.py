@@ -182,9 +182,9 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     #get targets
     targets = target_decoys[target_decoys['Label'] == 1].copy()
     
-    targets['original_target_sequence'] = targets['Peptide']
-    #targets['original_target_sequence'] = targets['Peptide'].str.replace(
-    #    "\\[|\\]|\\.|\\d+", "", regex=True)
+    #targets['original_target_sequence'] = targets['Peptide']
+    targets['original_target_sequence'] = targets['Peptide'].str.replace(
+        "\\[|\\]|\\.|\\d+", "", regex=True)
         
     targets = targets[targets['original_target_sequence'].isin(
         original_discoveries)].copy()

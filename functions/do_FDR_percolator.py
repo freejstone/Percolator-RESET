@@ -305,14 +305,14 @@ def main():
 
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
 
-    if df_new.shape[0] > 0 and get_psms:
+    if df_new.shape[0] > 0 and get_psms and (narrow == False):
         sys.stderr.write(
             "Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
         logging.info(
             "Reporting all PSMs within each mass-cluster associated to a discovered peptide. ")
         originally_discovered = df_new.loc[df_new.Label == 1, 'Peptide'].copy()
-        #originally_discovered = originally_discovered.str.replace(
-        #    "\\[|\\]|\\.|\\d+", "", regex=True)
+        originally_discovered = originally_discovered.str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True)
         df_extra = uf.create_cluster(PSMs.copy(
         ), scale, originally_discovered, model, isolation_window, columns_trained)
         df_extra['originally_discovered'] = False

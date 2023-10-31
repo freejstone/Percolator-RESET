@@ -337,7 +337,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
                             greater_is_better=True, needs_threshold=True)
 
     if kernel == 'linear':
-        grid = GridSearchCV(svm.LinearSVC(max_iter=1e7), param_grid=param_grid,
+        grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7)), param_grid=param_grid,
                             cv=folds, scoring=my_scorer)
     else:
         grid = GridSearchCV(svm.SVC(), param_grid=param_grid,
@@ -348,7 +348,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
                                 greater_is_better=True, needs_threshold=True)
 
         if kernel == 'linear':
-            grid = GridSearchCV(svm.LinearSVC(max_iter=1e7), param_grid=param_grid,
+            grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7)), param_grid=param_grid,
                                 cv=folds, scoring=my_scorer)
         else:
             grid = RandomizedSearchCV(svm.SVC(kernel=kernel), param_distributions=param_grid, n_iter=10,
@@ -361,7 +361,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
                                 greater_is_better=True, needs_threshold=True)
 
         if kernel == 'linear':
-            grid = GridSearchCV(svm.LinearSVC(max_iter=1e7), param_grid=param_grid,
+            grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7)), param_grid=param_grid,
                                 cv=folds, scoring=my_scorer)
         else:
             grid = RandomizedSearchCV(svm.SVC(kernel=kernel), param_distributions=param_grid, n_iter=10,
@@ -636,11 +636,11 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         logging.info("Observed power: %s." % (power_final))
         sys.stderr.write("Observed power: %s.\n" % (power_final))
 
-        logging.info("Trained power: %s." % (best_train_power))
-        sys.stderr.write("Trained power: %s.\n" % (best_train_power))
+        logging.info("Mean cross-validation power: %s." % (best_train_power))
+        sys.stderr.write("Mean cross-validation power: %s.\n" % (best_train_power))
 
-        logging.info("Std trained power: %s." % (best_train_std))
-        sys.stderr.write("Std trained power: %s.\n" % (best_train_std))
+        logging.info("Std cross-validation power: %s." % (best_train_std))
+        sys.stderr.write("Std cross-validation power: %s.\n" % (best_train_std))
 
     #using the last new_idx to report the discoveries
     df_orig['SVM_score'] = new_scores
