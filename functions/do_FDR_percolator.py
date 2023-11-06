@@ -52,7 +52,8 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
     --pair <T/F> A boolean determining whether target-decoy should be done using search file or not. Default = F.
-    
+    --dynamic_competition <T/F> A boolean determining whether dynamic competition is first required. If not, it is assumed that the competition has been completed externally. If False, only a single search file in pin format is required. Default = T.
+    --mult <int> The number of decoy databases used (this is usually inferred from the number of search files given so this is only relevant if dynamic_competition = F). Default = 1.
 """
 
 
@@ -77,6 +78,8 @@ def main():
     get_psms = False
     isolation_window = [2, 2]
     pair = False
+    dynamic_competition = True
+    mult = 1
     command_line = ' '.join(sys.argv)
 
     # Parse the command line.
@@ -152,12 +155,26 @@ def main():
                 sys.stderr.write("Invalid argument for --pair")
                 sys.exit(1)
             sys.argv = sys.argv[1:]
+        elif (next_arg == "--dynamic_competition"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                dynamic_competition = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                dynamic_competition = False
+            else:
+                sys.stderr.write("Invalid argument for --dynamic_competition")
+                sys.exit(1)
+            sys.argv = sys.argv[1:]
+        elif (next_arg == '--mult'):
+            mult = int(sys.argv[0])
+            sys.argv = sys.argv[1:]
         else:
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
     if (len(sys.argv) == 2):
         search_files = str(sys.argv[0]).split(',')
         td_lists = str(sys.argv[1]).split(',')
+    elif (len(sys.argv) == 1 and not dynamic_competition):
+        search_files = str(sys.argv[0]).split(',')
     else:
         #sys.stderr.write('Version: ' + str(__version__) + " \n")
         sys.stderr.write(USAGE)
@@ -178,39 +195,47 @@ def main():
 
     if single_decoy:
         
-        sys.stderr.write("Reading in search file(s) and peptide list(s). \n")
-        logging.info("Reading in search file(s) and peptide list(s).")
+        sys.stderr.write("Reading in search file. \n")
+        logging.info("Reading in search file.")
         
         data_dfs = []
-        peptide_list_dfs = []
         for search_file in search_files:
             data_df = uf.read_pin(search_file)
             #removing flanking aa
             data_df['Peptide'] = data_df['Peptide'].apply(
                 lambda x: x[2:(len(x) - 2)])
             data_dfs.append(data_df)
-        for td_list in td_lists:
-            peptide_list_df = pd.read_table(td_list)
-            if 'decoy(s)' in peptide_list_df.columns:
-                peptide_list_df.rename(columns={'decoy(s)': 'decoy'}, inplace=True)
-            peptide_list_df.drop_duplicates(inplace=True)
-            peptide_list_dfs.append(peptide_list_df)
         
-        #removing low complexity targets that do not produce a decoy
-        low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
-        )]
-        data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(
-            low_complex_targets)].reset_index(drop=True)
+        if dynamic_competition:
+            sys.stderr.write("Reading in peptide list. \n")
+            logging.info("Reading in search file.")
+            peptide_list_dfs = []
+            for td_list in td_lists:
+                peptide_list_df = pd.read_table(td_list)
+                if 'decoy(s)' in peptide_list_df.columns:
+                    peptide_list_df.rename(columns={'decoy(s)': 'decoy'}, inplace=True)
+                peptide_list_df.drop_duplicates(inplace=True)
+                peptide_list_dfs.append(peptide_list_df)
+            
+            #removing low complexity targets that do not produce a decoy
+            low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
+            )]
+            data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(
+                low_complex_targets)].reset_index(drop=True)
 
-        #doing peptide level competition
-        df_all = pf.peptide_level(
-            data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow, pair)
-
-        PSMs = data_dfs[0].copy()
-        PSMs['rank'] = PSMs['SpecId'].apply(
-            lambda x: int(x[-1]))
-        PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
-        PSMs.drop(remove, axis=1, inplace=True, errors='ignore')
+            #doing peptide level competition
+            df_all = pf.peptide_level(
+                data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow, pair)
+            mult = 1
+        else:
+            df_all = data_dfs[0]
+        
+        if get_psms and dynamic_competition:
+            PSMs = data_dfs[0].copy()
+            PSMs['rank'] = PSMs['SpecId'].apply(
+                lambda x: int(x[-1]))
+            PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
+            PSMs.drop(remove, axis=1, inplace=True, errors='ignore')
 
         #applying scaling
         df_all_scale, scale = pf.do_scale(df_all.copy())
@@ -228,13 +253,13 @@ def main():
 
         #do SVM
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold)
+            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult=mult)
 
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
 
     else:
-        sys.stderr.write("Reading in search file(s). \n")
-        logging.info("Reading in search file(s).")
+        sys.stderr.write("Reading in search files. \n")
+        logging.info("Reading in search files.")
         data_dfs = []
         for search_file in search_files:
             data_df = uf.read_pin(search_file)
@@ -305,7 +330,7 @@ def main():
 
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
 
-    if df_new.shape[0] > 0 and get_psms and (narrow == False):
+    if df_new.shape[0] > 0 and get_psms and (narrow == False) and (dynamic_competition):
         sys.stderr.write(
             "Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
         logging.info(
