@@ -9,11 +9,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10.1'
+          python-version: '3.10'
       - run: python3 -m pip install --upgrade pip pandas
       - run: python3 -m pip install --upgrade pip sklearn
       - run: python3 -m pip install --upgrade pip numpy
-      - run: python3 -m CONGA --overwrite T --return_mass_mod_hist T --n_processes 3 --isolation_window 0.75,0.75 --seed 1 ./data/test1/narrow_example1.tide-search.txt ./data/tide/open_example1.tide-search.txt
-      - run: python3 -m CONGA --overwrite T --dcy_prefix DECOY --score e-value --seed 1 ./data/comet/narrow_example1.comet.txt ./data/comet/open_example1.comet.txt
-      - run: python3 -m CONGA --overwrite T --score hyperscore --seed 1 ./data/MS/narrow.tsv ./data/MS/open.tsv ./data/MS/tide-index.peptides.txt
-      - run: python -m pytest ./CONGA/tests/
+      - run: python3 functions/do_FDR_percolator.py --overwrite T --get_psms T --seed 1 ./data/test1/narrow_50.make-pin.pin ./data/test1/tide-index.peptides.txt
+      - run: python3 functions/do_FDR_percolator.py --overwrite T --dynamic_competition F --seed 1 ./data/test1/narrow_50.make-pin.pin ./data/test1/tide-index.peptides.txt
