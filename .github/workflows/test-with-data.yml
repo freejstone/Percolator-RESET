@@ -11,7 +11,7 @@ jobs:
         with:
           python-version: '3.10'
       - run: python3 -m pip install --upgrade pip pandas
-      - run: python3 -m pip install --upgrade pip sklearn
+      - run: python3 -m pip install --upgrade pip scikit-learn
       - run: python3 -m pip install --upgrade pip numpy
       - run: python3 functions/do_FDR_percolator.py --overwrite T --get_psms T --seed 1 ./data/test1/narrow_50.make-pin.pin ./data/test1/tide-index.peptides.txt
       - run: python3 functions/do_FDR_percolator.py --overwrite T --dynamic_competition F --seed 1 ./data/test1/narrow_50.make-pin.pin ./data/test1/tide-index.peptides.txt
