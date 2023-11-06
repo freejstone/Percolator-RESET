@@ -1,0 +1,19 @@
+name: test-with-data
+run-name: ${{ github.actor }} is testing commands with sample data
+on: 
+  push:
+jobs:
+  check-code-finishes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.1'
+      - run: python3 -m pip install --upgrade pip pandas
+      - run: python3 -m pip install --upgrade pip sklearn
+      - run: python3 -m pip install --upgrade pip numpy
+      - run: python3 -m CONGA --overwrite T --return_mass_mod_hist T --n_processes 3 --isolation_window 0.75,0.75 --seed 1 ./data/test1/narrow_example1.tide-search.txt ./data/tide/open_example1.tide-search.txt
+      - run: python3 -m CONGA --overwrite T --dcy_prefix DECOY --score e-value --seed 1 ./data/comet/narrow_example1.comet.txt ./data/comet/open_example1.comet.txt
+      - run: python3 -m CONGA --overwrite T --score hyperscore --seed 1 ./data/MS/narrow.tsv ./data/MS/open.tsv ./data/MS/tide-index.peptides.txt
+      - run: python -m pytest ./CONGA/tests/

@@ -228,6 +228,8 @@ def main():
                 data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow, pair)
             mult = 1
         else:
+            sys.stderr.write("Skipping dynamic level competition (and assuming competition has already been performed). \n")
+            logging.info("Skipping dynamic level competition (and assuming competition has already been performed).")
             df_all = data_dfs[0]
         
         if get_psms and dynamic_competition:
