@@ -391,14 +391,14 @@ def do_scale(df_all, df_extra=None):
     '''
     #scale non-binary features
     scale = StandardScaler()
-    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
-        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
+        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
 
     if type(df_extra) == type(None):
         return(df_all, scale)
     else:
-        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
-            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
+            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
         return(df_all, scale, df_extra)
 
 ################################################################################################
@@ -478,10 +478,10 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     SVM_train_labels = train_df['Label'].copy()
     if 'filename' in train_df.columns:
         SVM_train_features = train_df.drop(
-            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
     else:
         SVM_train_features = train_df.drop(
-            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
 
     #Get rid of redundant features
     sds = SVM_train_features.apply(np.std, axis=0)

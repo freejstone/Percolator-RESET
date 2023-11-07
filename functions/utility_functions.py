@@ -205,7 +205,7 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     targets["cluster"] = targets.groupby(
         'original_target_sequence', group_keys=False).condition.cumsum()
     
-    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
+    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'ExpMass', 'CalcMass', 'Peptide', 'Proteins', 'trained', 'charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
     
     scaled_target.loc[:,:] = scale.transform(scaled_target)
     

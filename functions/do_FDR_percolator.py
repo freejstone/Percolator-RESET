@@ -231,6 +231,9 @@ def main():
             sys.stderr.write("Skipping dynamic level competition (and assuming competition has already been performed). \n")
             logging.info("Skipping dynamic level competition (and assuming competition has already been performed).")
             df_all = data_dfs[0]
+            sys.stderr.write("Dropping the features: %s. \n" %(', '.join(remove)))
+            logging.info("Dropping the features: %s." %(', '.join(remove)))
+            df_all.drop(remove, axis = 1, inplace = True, errors = 'ignore')
         
         if get_psms and dynamic_competition:
             PSMs = data_dfs[0].copy()
