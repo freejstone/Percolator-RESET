@@ -348,7 +348,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
                                 greater_is_better=True, needs_threshold=True)
 
         if kernel == 'linear':
-            grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),default=True), param_grid=param_grid,
+            grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),dual=True), param_grid=param_grid,
                                 cv=folds, scoring=my_scorer)
         else:
             grid = RandomizedSearchCV(svm.SVC(kernel=kernel), param_distributions=param_grid, n_iter=10,
@@ -361,7 +361,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
                                 greater_is_better=True, needs_threshold=True)
 
         if kernel == 'linear':
-            grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),), param_grid=param_grid,
+            grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),dual=True), param_grid=param_grid,
                                 cv=folds, scoring=my_scorer)
         else:
             grid = RandomizedSearchCV(svm.SVC(kernel=kernel), param_distributions=param_grid, n_iter=10,
