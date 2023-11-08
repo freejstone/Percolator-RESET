@@ -179,8 +179,8 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
                 df_all_sub = df_all_sub.merge(
                     peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
                 
-                if any(df_all_sub.original_target.isna()):
-                    sys.exit("Some peptides in the search file do not have a pair in the peptide list. E.g. %s \n" %(df_all_sub.Peptide[df_all_sub.original_target.isna()].values[0])) 
+                if any(df_all_sub.original_target_y.isna()):
+                    sys.exit("Some peptides in the search file do not have a pair in the peptide list. E.g. %s \n" %(df_all_sub.Peptide[df_all_sub.original_target_y.isna()].values[0])) 
                     
                 df_all.loc[(df_all.Label == -1) & (df_all.filename == i),
                            'original_target'] = df_all_sub['original_target_y'].tolist()
