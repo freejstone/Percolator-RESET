@@ -116,6 +116,8 @@ def PSM_level(target_file, decoy_file, top=1):
     df.drop(['Charge', 'SubsequentValue'], axis=1, inplace=True)
 
     df = df[df['rank'] <= top]
+    
+    df.drop(['rank'], axis=1, inplace=True)
 
     return(df.reset_index(drop=True))
 #########################################################################################################
@@ -257,7 +259,7 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
 
     sys.stderr.write("Dropping the features: %s. \n" %(', '.join(remove)))
     logging.info("Dropping the features: %s." %(', '.join(remove)))
-    df_all.drop(['original_target', 'total_mod_mass', 'sorted_Peptide', 'id'], axis=1, inplace=True, errors='ignore')
+    df_all.drop(['original_target', 'total_mod_mass', 'sorted_Peptide', 'id', 'rank'], axis=1, inplace=True, errors='ignore')
     df_all.drop(remove, axis=1, inplace=True, errors='ignore')
 
     return(df_all)
