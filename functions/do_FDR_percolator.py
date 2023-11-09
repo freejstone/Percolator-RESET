@@ -44,6 +44,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --total_iter <int> The number of SVM training iterations. Default = 5.
     --train_FDR_threshold <float> The FDR threshold used to define positive training set. Default = 0.01.
     --output_dir <str> The path to the output directory. Default = '.'
+    --report_decoys <T/F> A boolean indicating whether you would like the estimating decoys to be printed as well. Default = T.
     --file_root <str> The name of the file root when outputting results. Default = 'FDR_percoaltor'.
     --remove <str> A comma-separated list of features to remove prior to SVM trainings. Default = 'enzInt'.
     --overwrite <T/F> A boolean determining whether do_FDR_percolator.py should ovewrite the present files in the directory. Default = F.
@@ -69,6 +70,7 @@ def main():
     total_iter = 5
     train_FDR_threshold = 0.01
     output_dir = '.'
+    report_decoys = False
     file_root = 'FDR_percolator'
     remove = ['enzInt']
     overwrite = False
@@ -110,6 +112,15 @@ def main():
             sys.argv = sys.argv[1:]
         elif (next_arg == "--output_dir"):
             output_dir = str(sys.argv[0])
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--report_decoys"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                report_decoys = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                report_decoys = False
+            else:
+                sys.stderr.write("Invalid argument for --report_decoys")
+                sys.exit(1)
             sys.argv = sys.argv[1:]
         elif (next_arg == "--file_root"):
             file_root = str(sys.argv[0])
@@ -259,7 +270,7 @@ def main():
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
             0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult=mult)
 
-        df_new = df_new.loc[df_new.q_val <= FDR_threshold]
+        df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
 
     else:
         sys.stderr.write("Reading in search files. \n")
@@ -331,7 +342,7 @@ def main():
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
             0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult=2)
 
-        df_new = df_new.loc[df_new.q_val <= FDR_threshold]
+        df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
     
     
     coefficients = np.concatenate((model.best_estimator_.coef_[0], model.best_estimator_.intercept_))
@@ -344,7 +355,12 @@ def main():
     sys.stderr.write(coefficients.to_string() + "\n")
     logging.info('Features that are constant are dropped.')
     sys.stderr.write('Features that are constant are dropped. \n')
-
+    
+    #write output folder
+    if output_dir != '.':
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+    
     if df_new.shape[0] > 0 and get_psms and (narrow == False) and (dynamic_competition):
         sys.stderr.write(
             "Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
@@ -368,34 +384,29 @@ def main():
 
         # remove duplicate values from df_extra
         df_final = df_final.drop_duplicates(['SpecId', 'filename', 'Peptide'])
-
-        #write results
-        if output_dir != '.':
-            if not os.path.isdir(output_dir):
-                os.mkdir(output_dir)
-            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
-                                             ".peptides.txt", header=True, index=False, sep='\t')
-            df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
-                                                 ".psms.txt", header=True, index=False, sep='\t')
-
-        else:
-            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
-                          ".peptides.txt", header=True, index=False, sep='\t')
-            df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
-                                                 ".psms.txt", header=True, index=False, sep='\t')
-    else:
-
-        #write results
-        if output_dir != '.':
-            if not os.path.isdir(output_dir):
-                os.mkdir(output_dir)
-            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
-                                             ".peptides.txt", header=True, index=False, sep='\t')
-
-        else:
-            df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
-                          ".peptides.txt", header=True, index=False, sep='\t')
-
+        
+        # write output
+        df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
+                                             ".psms.txt", header=True, index=False, sep='\t')
+    
+    # write output
+    df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
+                                         ".peptides.txt", header=True, index=False, sep='\t')
+        
+    if report_decoys:
+        decoys_final = df_new[df_new.Label == -1].reset_index(drop=True).copy()
+        decoys_final['estimating_decoy'] = True
+        decoys_final['training_decoy'] = False
+        train_all_new['estimating_decoy'] = False
+        train_all_new['training_decoy'] = True
+        decoys_final = pd.concat([decoys_final, train_all_new]).reset_index(drop = True).copy()
+        decoys_final = decoys_final.sort_values(
+            by='SVM_score', ascending=False).reset_index(drop=True)
+        decoys_final.drop('q_val', axis=1, inplace=True, errors='ignore')
+        # write output
+        decoys_final.to_csv(output_dir + "/" + file_root +
+                                         ".decoy_peptides.txt", header=True, index=False, sep='\t')
+        
     end_time = time.time()
 
     logging.info("Elapsed time: " +
