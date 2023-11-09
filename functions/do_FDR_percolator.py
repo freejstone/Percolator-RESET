@@ -332,6 +332,18 @@ def main():
             0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult=2)
 
         df_new = df_new.loc[df_new.q_val <= FDR_threshold]
+    
+    
+    coefficients = np.concatenate((model.best_estimator_.coef_[0], model.best_estimator_.intercept_))
+    coefficients = pd.Series(coefficients)
+    coefficients.index = columns_trained.append(pd.Index(['intercept']))
+    
+    logging.info('Final SVM feature coefficients:')
+    sys.stderr.write('Final SVM feature coefficients: \n')
+    logging.info(coefficients.to_string())
+    sys.stderr.write(coefficients.to_string() + "\n")
+    logging.info('Features that are constant are dropped.')
+    sys.stderr.write('Features that are constant are dropped. \n')
 
     if df_new.shape[0] > 0 and get_psms and (narrow == False) and (dynamic_competition):
         sys.stderr.write(
