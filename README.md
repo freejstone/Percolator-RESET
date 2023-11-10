@@ -1,6 +1,6 @@
 # Percolator RESET
 
-This contains the code for the associated manuscript, titled "[Splitting the decoys into training and estimating: how to train a Percolator-like post-processor and maintain control of the false discovery rate](https://www.biorxiv.org/content/10.1101/2023.10.26.564068v1)". 
+This contains the code for the associated manuscript, titled "[How to train a post-processor for tandem mass spectrometry proteomics database search while maintaining control of the false discovery rate](https://www.biorxiv.org/content/10.1101/2023.10.26.564068v1)". 
 
 The important folder is *functions* which contains the actual scripts that implements our procedure using Python, from the command line. The main python script is the file, `do_FDR_percolator.py`, and the auxiliary functions can be found under `percolator_functions.py` and `utility_functions.py`. This python implementation may be used as interim until the development in C (Percolator). For further details on implementation, see the USAGE under `do_FDR_percolator.py`.
 
