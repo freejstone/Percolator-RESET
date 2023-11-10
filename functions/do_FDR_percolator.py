@@ -322,7 +322,7 @@ def main():
 
         #doing multi peptide level competition
         df_all = pf.peptide_level(
-            data_df.copy(), peptide_list_dfs.copy(), remove, narrow, pair)
+            data_df.copy(), peptide_list_dfs.copy(), narrow, pair)
 
         #do scale
         df_all_scale, scale = pf.do_scale(df_all.copy())
