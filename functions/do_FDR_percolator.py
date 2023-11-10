@@ -213,7 +213,7 @@ def main():
         for search_file in search_files:
             data_df = uf.read_pin(search_file)
             #removing flanking aa
-            data_df['Peptide'] = data_df['Peptide'].str.extract(r'\.(.*?)\.', expand=False).fillna(data_df['Peptide'])
+            data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
             data_dfs.append(data_df)
         
         if dynamic_competition:
@@ -279,7 +279,7 @@ def main():
         for search_file in search_files:
             data_df = uf.read_pin(search_file)
             #removing flanking aa
-            data_df['Peptide'] = data_df['Peptide'].str.extract(r'\.(.*?)\.', expand=False).fillna(data_df['Peptide'])
+            data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
             data_dfs.append(data_df)
 
         #averaging the two tailor PSMs.
