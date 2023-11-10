@@ -123,7 +123,7 @@ def PSM_level(target_file, decoy_file, top=1):
 #########################################################################################################
 
 
-def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
+def peptide_level(df_all, peptide_list_df, narrow, pair):
     '''
 
     Parameters
@@ -132,8 +132,6 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
         Concantenated search file.
     peptide_list_df : Pandas Dataframe
         Tide-index target-decoy peptide pairs.
-    remove : List
-        A list of features to remove from consideration after peptide-level competition.
     open_narrow : str
         A string indicating whether the search files are from an open or narrow search.
     Returns
@@ -265,11 +263,7 @@ def peptide_level(df_all, peptide_list_df, remove, narrow, pair):
             
             df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'id'])
 
-    sys.stderr.write("Dropping the features: %s. \n" %(', '.join(remove)))
-    logging.info("Dropping the features: %s." %(', '.join(remove)))
     df_all.drop(['original_target', 'total_mod_mass', 'sorted_Peptide', 'id', 'rank'], axis=1, inplace=True, errors='ignore')
-    df_all.drop(remove, axis=1, inplace=True, errors='ignore')
-
     return(df_all)
 #########################################################################################################
 
@@ -401,14 +395,14 @@ def do_scale(df_all, df_extra=None):
     '''
     #scale non-binary features
     scale = StandardScaler()
-    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
-        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
+        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
 
     if type(df_extra) == type(None):
         return(df_all, scale)
     else:
-        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
-            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
+            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
         return(df_all, scale, df_extra)
 
 ################################################################################################
@@ -463,9 +457,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
 
     train_df = pd.concat([train_all, train_targets]).reset_index(drop=True)
     train_df = train_df.sample(frac=1).reset_index(drop=True)
-
-    if type(remove) == list:
-        train_df.drop(remove, axis=1, inplace=True, errors='ignore')
+        
     if 'SVM_score' in train_df.columns:
         train_df = train_df.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)
@@ -481,18 +473,19 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
                      ].copy().reset_index(drop=True)
     df_orig = df_orig[~(df_orig.index.isin(train_all.index))
                       ].copy().reset_index(drop=True)
-    if type(remove) == list:
-        real_df.drop(remove, axis=1, inplace=True, errors='ignore')
-
+    
     #Preprocess dataframe
     SVM_train_labels = train_df['Label'].copy()
-    if 'filename' in train_df.columns:
-        SVM_train_features = train_df.drop(
-            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
-    else:
-        SVM_train_features = train_df.drop(
-            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ExpMass', 'CalcMass', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
-
+    
+    SVM_train_features = train_df.drop(
+        ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
+    
+    if type(remove) == list:
+        remove_list = [r for r in remove if r in SVM_train_features.columns]
+        sys.stderr.write("Dropping the features from training: %s. \n" %(', '.join(remove_list)))
+        logging.info("Dropping the features from training: %s." %(', '.join(remove_list)))        
+        SVM_train_features.drop(remove_list, axis=1, inplace=True, errors='ignore')
+    
     #Get rid of redundant features
     sds = SVM_train_features.apply(np.std, axis=0)
     SVM_train_features = SVM_train_features[SVM_train_features.columns[sds != 0]]
@@ -622,12 +615,12 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
 
         #get actual power if we were to stop here
         real_labels = real_df['Label'].copy()
-        if 'filename' in real_df.columns:
-            real_df_test = real_df.drop(
-                ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
-        else:
-            real_df_test = real_df.drop(
-                ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+        real_df_test = real_df.drop(
+            ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
+        
+        if type(remove) == list:
+            remove_list = [r for r in remove if r in SVM_train_features.columns]     
+            real_df_test.drop(remove_list, axis=1, inplace=True, errors='ignore')
 
         #Get rid of redundant features
         real_df_test = real_df_test[real_df_test.columns[real_df_test.columns.isin(
@@ -667,12 +660,8 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     else:
         train_all_test = train_all.copy()
 
-    if 'filename' in train_all_test.columns:
-        train_all_test = train_all_test.drop(
-            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
-    else:
-        train_all_test = train_all_test.drop(
-            ['ExpMass', 'CalcMass', 'SpecId', 'Label', 'ScanNr', 'Peptide', 'Proteins'], axis=1).copy()
+    train_all_test = train_all_test.drop(
+        ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
 
     #Get rid of redundant features
     train_all_test = train_all_test[train_all_test.columns[train_all_test.columns.isin(

@@ -72,7 +72,7 @@ def main():
     output_dir = '.'
     report_decoys = False
     file_root = 'FDR_percolator'
-    remove = ['enzInt']
+    remove = ['enzInt','ExpMass', 'CalcMass']
     overwrite = False
     # importantly the seed needs be random and not set at some value
     seed = int(datetime.now().timestamp())
@@ -235,22 +235,18 @@ def main():
 
             #doing peptide level competition
             df_all = pf.peptide_level(
-                data_dfs[0].copy(), peptide_list_dfs[0].copy(), remove, narrow, pair)
+                data_dfs[0].copy(), peptide_list_dfs[0].copy(), narrow, pair)
             mult = 1
         else:
             sys.stderr.write("Skipping dynamic level competition (and assuming competition has already been performed). \n")
             logging.info("Skipping dynamic level competition (and assuming competition has already been performed).")
             df_all = data_dfs[0]
-            sys.stderr.write("Dropping the features: %s. \n" %(', '.join(remove)))
-            logging.info("Dropping the features: %s." %(', '.join(remove)))
-            df_all.drop(remove, axis = 1, inplace = True, errors = 'ignore')
         
         if get_psms and dynamic_competition:
             PSMs = data_dfs[0].copy()
             PSMs['rank'] = PSMs['SpecId'].apply(
                 lambda x: int(x[-1]))
             PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
-            PSMs.drop(remove, axis=1, inplace=True, errors='ignore')
 
         #applying scaling
         df_all_scale, scale = pf.do_scale(df_all.copy())
@@ -265,10 +261,14 @@ def main():
         train_all = df_all_scale.loc[(df_all_scale['Label']
                                       == -1)].copy()
         train_all = train_all.loc[rand_indxs].copy()
+        
+        train_all_unscale = df_all.loc[(df_all['Label']
+                                      == -1)].copy()
+        train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
 
         #do SVM
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult=mult)
+            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove = remove, mult=mult)
 
         df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
 
@@ -337,6 +337,10 @@ def main():
         train_all = df_all_scale.loc[(df_all_scale['Label']
                                       == -1)].copy()
         train_all = train_all.loc[rand_indxs].copy()
+        
+        train_all_unscale = df_all.loc[(df_all['Label']
+                                      == -1)].copy()
+        train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
 
         #do svm
         train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
@@ -397,9 +401,10 @@ def main():
         decoys_final = df_new[df_new.Label == -1].reset_index(drop=True).copy()
         decoys_final['estimating_decoy'] = True
         decoys_final['training_decoy'] = False
-        train_all_new['estimating_decoy'] = False
-        train_all_new['training_decoy'] = True
-        decoys_final = pd.concat([decoys_final, train_all_new]).reset_index(drop = True).copy()
+        train_all_unscale['estimating_decoy'] = False
+        train_all_unscale['training_decoy'] = True
+        train_all_unscale['SVM_score'] = train_all_new.SVM_score
+        decoys_final = pd.concat([decoys_final, train_all_unscale]).reset_index(drop = True).copy()
         decoys_final = decoys_final.sort_values(
             by='SVM_score', ascending=False).reset_index(drop=True)
         decoys_final.drop('q_val', axis=1, inplace=True, errors='ignore')
