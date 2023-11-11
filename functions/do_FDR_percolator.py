@@ -84,7 +84,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
     --pair <T/F> A boolean determining whether explicit head-to-head competition using target-decoy pairing should be used. Default = T.
     --initial_dir <str> A string indicating which column will be the initial direction that defines the positive set for training and the peptide-level competition. Default = 'XCorr'.
-    --scores <str> A comma-separated list of calibrated scores that need averaging for the two-decoy database version of RESET (the same target PSM may have different scores depending on the decoy database used). Default = ''.
+    --score <str> A comma-separated list of calibrated scores that need averaging for the two-decoy database version of RESET (the same target PSM may have different scores depending on the decoy database used). Default = ''.
     --dynamic_competition <T/F> A boolean determining whether dynamic competition is first required. If not, it is assumed that the competition has been completed externally. If False, only a single search file in pin format is required. Default = T.
     --mult <int> The number of decoy databases used (this is usually inferred from the number of search files given but can be overidden if a single search file is provided but mult = 2 is required). Default = None.
 """
@@ -114,7 +114,7 @@ def main():
     isolation_window = [2, 2]
     pair = True
     initial_dir = 'XCorr'
-    scores = ['']
+    score = ['']
     dynamic_competition = True
     mult = None
     command_line = ' '.join(sys.argv)
@@ -213,8 +213,8 @@ def main():
         elif (next_arg == "--initial_dir"):
             initial_dir = str(sys.argv[0])
             sys.argv = sys.argv[1:]
-        elif (next_arg == "--scores"):
-            scores = str(sys.argv[0]).spli(',')
+        elif (next_arg == "--score"):
+            score = str(sys.argv[0]).spli(',')
             sys.argv = sys.argv[1:]
         elif (next_arg == "--dynamic_competition"):
             if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
@@ -323,7 +323,7 @@ def main():
             mult = 2
         
         #averaging the two tailor PSMs.
-        scores_list = [s for s in scores if s in data_dfs[0].columns]
+        scores_list = [s for s in score if s in data_dfs[0].columns]
         
         data_dfs[0] = data_dfs[0].merge(
             data_dfs[1][['SpecId'] + scores_list], how='left', on='SpecId')
