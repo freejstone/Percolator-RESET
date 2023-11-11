@@ -325,18 +325,19 @@ def main():
         #averaging the two tailor PSMs.
         scores_list = [s for s in score if s in data_dfs[0].columns]
         
-        data_dfs[0] = data_dfs[0].merge(
-            data_dfs[1][['SpecId'] + scores_list], how='left', on='SpecId')
-        
-        sys.stderr.write("Averaging the scores: %s. \n" %(', '.join(scores_list)))
-        logging.info("Averaging the scores: %s." %(', '.join(scores_list)))
-        
-        for s in scores_list:
-            if s + '_x' in data_dfs[0].columns:             
-                data_dfs[0][s] = (
-                    data_dfs[0][s + '_x'] + data_dfs[0][s + '_y'])/2
-                data_dfs[0].drop([s + '_x', s + '_y'],
-                                 inplace=True, axis=1)
+        if len(scores_list) > 0:
+            data_dfs[0] = data_dfs[0].merge(
+                data_dfs[1][['SpecId'] + scores_list], how='left', on='SpecId')
+            
+            sys.stderr.write("Averaging the scores: %s. \n" %(', '.join(scores_list)))
+            logging.info("Averaging the scores: %s." %(', '.join(scores_list)))
+            
+            for s in scores_list:
+                if s + '_x' in data_dfs[0].columns:             
+                    data_dfs[0][s] = (
+                        data_dfs[0][s + '_x'] + data_dfs[0][s + '_y'])/2
+                    data_dfs[0].drop([s + '_x', s + '_y'],
+                                     inplace=True, axis=1)
         data_dfs.pop(1)
         
         #do PSM level competition involving all PSMs
