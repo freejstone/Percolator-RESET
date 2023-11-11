@@ -257,6 +257,9 @@ def main():
     sys.stderr.write("Reading in search file(s). \n")
     logging.info("Reading in search file(s).")
     
+    if not dynamic_competition:
+        pair = False
+    
     data_dfs = []
     for search_file in search_files:
         data_df = uf.read_pin(search_file)
