@@ -5,7 +5,7 @@ Created on Sat Jun 17 13:40:07 2023
 
 author: jackfreestone
 
-This module performs the percolator algorithm with strict FDR control using either a single or an extra decoy.
+This module performs the percolator RESET algorithm with strict FDR control using either a single or an extra decoy.
 """
 import os
 import time
@@ -20,9 +20,9 @@ import percolator_functions as pf
 
 USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-decoy matchings>
 
-  This script implements the percolator algorithm with FDR control. The first input is a
+  This script implements the percolator RESET algorithm with FDR control. The first input is a
   comma-separated list of the search file(s) in pin format to be used. The second input is a 
-  comma-separated list of the associated target-decoy matches produced by tide-index.
+  comma-separated list of the associated target-decoy matches in the format of tide-index.
   
   For a single decoy database, provide <search files> with just the single concatenated search
   file (concat = T) and <target-decoy matchings> with the single target-decoy peptide list.
@@ -35,6 +35,36 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
       
   <search files> = 'target_1,target_2,decoy_1,decoy_2'
   <target-decoy matchings> = 'peptide_list_1,peptide_list_2'
+  
+  As an example:
+
+      python3 do_FDR_percolator.py search_file1.txt peptide_list1.txt
+      
+      python3 do_FDR_percolator.py target_file1.txt,target_file2.txt,decoy_file1.txt,decoy_file2.txt peptide_list_1.txt,peptide_list_2.txt
+  
+  -----------------------------------------------------------------------------------------------------------------------------------------------    
+  
+  It is possible to run percolator RESET without explicity pairing the targets and decoys together, thus allievating the need for a peptide list.
+  
+  For the single decoy database version of RESET:
+      
+      python3 do_FDR_percolator.py --pair F search_file1.txt
+      
+  For the two decoy database version of RESET:
+      
+      python3 do_FDR_percolator.py --pair F --mult 2 search_file1.txt
+      
+  The --mult option here is important since the module will infer that you only used one decoy database.
+  
+  -----------------------------------------------------------------------------------------------------------------------------------------------
+  
+  Lastly, you may want to run percolator RESET having already completed the competition step externally. In this case for single decoy RESET:
+      
+      python3 do_FDR_percolator.py --dynamic_competition F search_file1.txt
+      
+  and for two decoy RESET:
+      
+      python3 do_FDR_percolator.py --dynamic_competition F --mult 2 search_file1.txt
             
   Options:
       
@@ -52,9 +82,11 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --p_init <float> The proportion of decoys to use as the informative decoy set. Default = 0.5
     --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Only relevant for --narrow F. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
-    --pair <T/F> A boolean determining whether target-decoy should be done using search file or not. Default = F.
+    --pair <T/F> A boolean determining whether explicit head-to-head competition using target-decoy pairing should be used. Default = T.
+    --initial_dir <str> A string indicating which column will be the initial direction that defines the positive set for training and the peptide-level competition. Default = 'XCorr'.
+    --scores <str> A comma-separated list of calibrated scores that need averaging for the two-decoy database version of RESET (the same target PSM may have different scores depending on the decoy database used). Default = ''.
     --dynamic_competition <T/F> A boolean determining whether dynamic competition is first required. If not, it is assumed that the competition has been completed externally. If False, only a single search file in pin format is required. Default = T.
-    --mult <int> The number of decoy databases used (this is usually inferred from the number of search files given so this is only relevant if dynamic_competition = F). Default = 1.
+    --mult <int> The number of decoy databases used (this is usually inferred from the number of search files given but can be overidden if a single search file is provided but mult = 2 is required). Default = None.
 """
 
 
@@ -78,10 +110,13 @@ def main():
     seed = int(datetime.now().timestamp())
     p_init_default = True
     get_psms = False
+    get_all_psms = False
     isolation_window = [2, 2]
-    pair = False
+    pair = True
+    initial_dir = 'XCorr'
+    scores = ['']
     dynamic_competition = True
-    mult = 1
+    mult = None
     command_line = ' '.join(sys.argv)
 
     # Parse the command line.
@@ -153,6 +188,15 @@ def main():
                 sys.stderr.write("Invalid argument for --get_psms")
                 sys.exit(1)
             sys.argv = sys.argv[1:]
+        elif (next_arg == "--get_all_psms"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                get_all_psms = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                get_all_psms = False
+            else:
+                sys.stderr.write("Invalid argument for --get_all_psms")
+                sys.exit(1)
+            sys.argv = sys.argv[1:]
         elif (next_arg == "--isolation_window"):
             isolation_window = str(sys.argv[0]).split(',')
             isolation_window = [float(c) for c in isolation_window]
@@ -165,6 +209,12 @@ def main():
             else:
                 sys.stderr.write("Invalid argument for --pair")
                 sys.exit(1)
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--initial_dir"):
+            initial_dir = str(sys.argv[0])
+            sys.argv = sys.argv[1:]
+        elif (next_arg == "--scores"):
+            scores = str(sys.argv[0]).spli(',')
             sys.argv = sys.argv[1:]
         elif (next_arg == "--dynamic_competition"):
             if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
@@ -184,7 +234,7 @@ def main():
     if (len(sys.argv) == 2):
         search_files = str(sys.argv[0]).split(',')
         td_lists = str(sys.argv[1]).split(',')
-    elif (len(sys.argv) == 1 and not dynamic_competition):
+    elif ((len(sys.argv) == 1 and not dynamic_competition) or (len(sys.argv) == 1 and not pair)):
         search_files = str(sys.argv[0]).split(',')
     else:
         #sys.stderr.write('Version: ' + str(__version__) + " \n")
@@ -203,103 +253,24 @@ def main():
     logging.info("Using seed: %s." % seed)
 
     single_decoy = (len(search_files) == 1)
+    
+    sys.stderr.write("Reading in search file(s). \n")
+    logging.info("Reading in search file(s).")
+    
+    data_dfs = []
+    for search_file in search_files:
+        data_df = uf.read_pin(search_file)
+        #removing flanking aa
+        data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
+        data_dfs.append(data_df)
+        
+    if not dynamic_competition:
+        sys.stderr.write("Skipping dynamic level competition (and assuming competition has already been performed). \n")
+        logging.info("Skipping dynamic level competition (and assuming competition has already been performed).")
 
-    if single_decoy:
-        
-        sys.stderr.write("Reading in search file. \n")
-        logging.info("Reading in search file.")
-        
-        data_dfs = []
-        for search_file in search_files:
-            data_df = uf.read_pin(search_file)
-            #removing flanking aa
-            data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
-            data_dfs.append(data_df)
-        
-        if dynamic_competition:
-            sys.stderr.write("Reading in peptide list. \n")
-            logging.info("Reading in search file.")
-            peptide_list_dfs = []
-            for td_list in td_lists:
-                peptide_list_df = pd.read_table(td_list)
-                if 'decoy(s)' in peptide_list_df.columns:
-                    peptide_list_df.rename(columns={'decoy(s)': 'decoy'}, inplace=True)
-                peptide_list_df.drop_duplicates(inplace=True)
-                peptide_list_dfs.append(peptide_list_df)
-            
-            #removing low complexity targets that do not produce a decoy
-            low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
-            )]
-            data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(
-                low_complex_targets)].reset_index(drop=True)
-
-            #doing peptide level competition
-            df_all = pf.peptide_level(
-                data_dfs[0].copy(), peptide_list_dfs[0].copy(), narrow, pair)
-            mult = 1
-        else:
-            sys.stderr.write("Skipping dynamic level competition (and assuming competition has already been performed). \n")
-            logging.info("Skipping dynamic level competition (and assuming competition has already been performed).")
-            df_all = data_dfs[0]
-        
-        if get_psms and dynamic_competition:
-            PSMs = data_dfs[0].copy()
-            PSMs['rank'] = PSMs['SpecId'].apply(
-                lambda x: int(x[-1]))
-            PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
-
-        #applying scaling
-        df_all_scale, scale = pf.do_scale(df_all.copy())
-
-        if p_init_default:
-            p_init = 0.5
-
-        #create target-decoys at pseudolevel
-        rand_indxs = np.random.choice([True, False], replace = True, size = sum((df_all_scale['Label']
-                                      == -1)), p = [p_init, 1 - p_init])
-        
-        train_all = df_all_scale.loc[(df_all_scale['Label']
-                                      == -1)].copy()
-        train_all = train_all.loc[rand_indxs].copy()
-        
-        train_all_unscale = df_all.loc[(df_all['Label']
-                                      == -1)].copy()
-        train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
-
-        #do SVM
-        train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove = remove, mult=mult)
-
-        df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
-
-    else:
-        sys.stderr.write("Reading in search files. \n")
-        logging.info("Reading in search files.")
-        data_dfs = []
-        for search_file in search_files:
-            data_df = uf.read_pin(search_file)
-            #removing flanking aa
-            data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
-            data_dfs.append(data_df)
-
-        #averaging the two tailor PSMs.
-        data_dfs[0] = data_dfs[0].merge(
-            data_dfs[1][['SpecId', 'TailorScore']], how='left', on='SpecId')
-        
-        sys.stderr.write("Fixing the Tailor Scores. \n")
-        logging.info("Fixing the Tailor Scores.")
-        
-        data_dfs[0]['TailorScore'] = (
-            data_dfs[0].TailorScore_x + data_dfs[0].TailorScore_y)/2
-        data_dfs[0].drop(['TailorScore_x', 'TailorScore_y'],
-                         inplace=True, axis=1)
-        data_dfs.pop(1)
-        
-        #do PSM level competition involving all PSMs
-        data_df = pf.PSM_level(data_dfs[0].copy(), data_dfs[1:].copy(), top=1)
-        
+    if pair:
         sys.stderr.write("Reading in peptide list(s). \n")
-        logging.info("Reading in peptide list(s).")
+        logging.info("Reading in search file(s).")
         peptide_list_dfs = []
         for td_list in td_lists:
             peptide_list_df = pd.read_table(td_list)
@@ -307,47 +278,110 @@ def main():
                 peptide_list_df.rename(columns={'decoy(s)': 'decoy'}, inplace=True)
             peptide_list_df.drop_duplicates(inplace=True)
             peptide_list_dfs.append(peptide_list_df)
+            
+    else:
+        if dynamic_competition:
+            sys.stderr.write("No peptide-list pairing provided. Not performing explicit head-to-head competition. \n")
+            logging.info("No peptide-list pairing provided. Not performing explicit head-to-head competition.")
+        df_all = data_dfs[0]
+
+    if single_decoy:
         
-        #removing low complexity targets that do not produce a decoy
-        low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
-        )]
-        data_df = data_df[~data_df.Peptide.isin(
-            low_complex_targets)].reset_index(drop=True)
+        if mult == None:
+            mult = 1
+        
+        if pair:
+            #removing low complexity targets that do not produce a decoy
+            low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
+            )]
+            data_dfs[0] = data_dfs[0][~data_dfs[0].Peptide.isin(
+                low_complex_targets)].reset_index(drop=True)
+
+        if dynamic_competition:
+            #doing peptide level competition
+            if pair:
+                df_all = pf.peptide_level(
+                    data_dfs[0].copy(), peptide_list_dfs[0].copy(), narrow, pair, initial_dir)
+            else:
+                df_all = pf.peptide_level(
+                    data_dfs[0].copy(), None, narrow, pair, initial_dir)
+        
+        
+        PSMs = data_dfs[0].copy()
+        PSMs['rank'] = PSMs['SpecId'].apply(
+            lambda x: int(x[-1]))
+        PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
+
+
+    else:
+        
+        if mult == None:
+            mult = 2
+        
+        #averaging the two tailor PSMs.
+        scores_list = [s for s in scores if s in data_dfs[0].columns]
+        
+        data_dfs[0] = data_dfs[0].merge(
+            data_dfs[1][['SpecId'] + scores_list], how='left', on='SpecId')
+        
+        sys.stderr.write("Averaging the scores: %s. \n" %(', '.join(scores_list)))
+        logging.info("Averaging the scores." %(', '.join(scores_list)))
+        
+        for s in scores_list:
+            if s + '_x' in data_dfs[0].columns:             
+                data_dfs[0][s] = (
+                    data_dfs[0][s + '_x'] + data_dfs[0][s + '_y'])/2
+                data_dfs[0].drop([s + '_x', s + '_y'],
+                                 inplace=True, axis=1)
+        data_dfs.pop(1)
+        
+        #do PSM level competition involving all PSMs
+        data_df = pf.PSM_level(data_dfs[0].copy(), data_dfs[1:].copy(), top=1)
+        
+        if pair:
+            #removing low complexity targets that do not produce a decoy
+            low_complex_targets = peptide_list_dfs[0].target[peptide_list_dfs[0].decoy.isna(
+            )]
+            data_df = data_df[~data_df.Peptide.isin(
+                low_complex_targets)].reset_index(drop=True)
 
         PSMs = data_df.copy()
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
-        PSMs.drop(remove, axis=1, inplace=True, errors='ignore')
-
-        #doing multi peptide level competition
-        df_all = pf.peptide_level(
-            data_df.copy(), peptide_list_dfs.copy(), narrow, pair)
-
-        #do scale
-        df_all_scale, scale = pf.do_scale(df_all.copy())
-
-        if p_init_default:
-            p_init = 0.5
-
-        #create decoys at pseudolevel
-        rand_indxs = np.random.choice([True, False], replace = True, size = sum((df_all_scale['Label']
-                                      == -1)), p = [p_init, 1 - p_init])
         
-        train_all = df_all_scale.loc[(df_all_scale['Label']
-                                      == -1)].copy()
-        train_all = train_all.loc[rand_indxs].copy()
-        
-        train_all_unscale = df_all.loc[(df_all['Label']
-                                      == -1)].copy()
-        train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
+        if dynamic_competition:
+            #doing multi peptide level competition
+            if pair:
+                df_all = pf.peptide_level(
+                    data_df.copy(), peptide_list_dfs.copy(), narrow, pair, initial_dir)
+            else:
+                df_all = pf.peptide_level(
+                    data_df.copy(), None, narrow, pair, initial_dir)
 
-        #do svm
-        train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-            0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, mult=2)
+    #applying scaling
+    df_all_scale, scale = pf.do_scale(df_all.copy())
 
-        df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
+    if p_init_default:
+        p_init = 0.5
+
+    #create target-decoys at pseudolevel
+    rand_indxs = np.random.choice([True, False], replace = True, size = sum((df_all_scale['Label']
+                                  == -1)), p = [p_init, 1 - p_init])
     
+    train_all = df_all_scale.loc[(df_all_scale['Label']
+                                  == -1)].copy()
+    train_all = train_all.loc[rand_indxs].copy()
+    
+    train_all_unscale = df_all.loc[(df_all['Label']
+                                  == -1)].copy()
+    train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
+
+    #do SVM
+    train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
+        0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove = remove, mult=mult, initial_dir=initial_dir)
+
+    df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
     
     coefficients = np.concatenate((model.best_estimator_.coef_[0], model.best_estimator_.intercept_))
     coefficients = pd.Series(coefficients)
@@ -374,7 +408,7 @@ def main():
         originally_discovered = originally_discovered.str.replace(
             "\\[|\\]|\\.|\\d+", "", regex=True)
         df_extra = uf.create_cluster(PSMs.copy(
-        ), scale, originally_discovered, model, isolation_window, columns_trained)
+        ), scale, originally_discovered, model, isolation_window, columns_trained, initial_dir)
         df_extra['originally_discovered'] = False
         df_new['originally_discovered'] = True
         
@@ -392,6 +426,11 @@ def main():
         # write output
         df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
                                              ".psms.txt", header=True, index=False, sep='\t')
+        
+    if get_all_psms:
+        PSMs = uf.score_PSMs(PSMs.copy(), scale, model, columns_trained)
+        PSMs.to_csv(output_dir + "/" + file_root +
+                                             ".all_psms.txt", header=True, index=False, sep='\t')
     
     # write output
     df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +

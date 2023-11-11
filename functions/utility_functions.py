@@ -156,7 +156,7 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
 #########################################################################################################
 
 
-def create_cluster(target_decoys, scale, original_discoveries, model, isolation_window, columns_trained):
+def create_cluster(target_decoys, scale, original_discoveries, model, isolation_window, columns_trained, initial_dir):
     '''
     
 
@@ -213,10 +213,7 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     
     targets['SVM_score'] = new_scores
     
-    if 'TailorScore' in targets.columns:
-        targets = targets.sort_values(by=['TailorScore'], ascending=False)
-    else:
-        targets = targets.sort_values(by=['XCorr'], ascending=False)
+    targets = targets.sort_values(by=[initial_dir], ascending=False)
         
     #take best PSM according to cluster and sequence with modification
     targets = targets.drop_duplicates(subset=['Peptide', 'cluster'])
@@ -224,4 +221,36 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     targets = targets.drop(['charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence'], axis = 1)
 
     return(targets)
+
+#########################################################################################################
+
+
+def score_PSMs(target_decoys, scale, model, columns_trained):
+    '''
+
+    Parameters
+    ----------
+    target_decoys : Pandas dataframe
+        top 1 PSMs, scaled.
+    scale : StandardScaler
+        For scaling and unscaling target_decoys
+    model : SVM.SVC()
+        SVM model.
+    columns_trained: List
+        Names of the columns during SVM training
+    Returns
+    -------
+    target PSMs are scored according to model.
+
+    '''
+
+    scaled_target_decoys = target_decoys[target_decoys.columns[~(target_decoys.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins']))]].copy()
+    
+    scaled_target_decoys.loc[:,:] = scale.transform(scaled_target_decoys)
+    
+    new_scores = model.decision_function(scaled_target_decoys[scaled_target_decoys.columns[scaled_target_decoys.columns.isin(columns_trained)]])
+    
+    target_decoys['SVM_score'] = new_scores
+
+    return(target_decoys)
 

@@ -123,7 +123,7 @@ def PSM_level(target_file, decoy_file, top=1):
 #########################################################################################################
 
 
-def peptide_level(df_all, peptide_list_df, narrow, pair):
+def peptide_level(df_all, peptide_list_df, narrow, pair, initial_dir):
     '''
 
     Parameters
@@ -150,15 +150,9 @@ def peptide_level(df_all, peptide_list_df, narrow, pair):
     df_all = df_all.sample(frac=1).reset_index(
         drop=True)  # break ties randomly
 
-    if 'SVM_score' in df_all.columns:
-        df_all = df_all.sort_values(by='SVM_score', ascending=False).reset_index(
-            drop=True)  # sort by score
-    elif 'TailorScore' in df_all.columns:
-        df_all = df_all.sort_values(by='TailorScore', ascending=False).reset_index(
-            drop=True)  # sort by score
-    else:
-        df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
-            drop=True)  # sort by score
+    df_all = df_all.sort_values(by=initial_dir, ascending=False).reset_index(
+        drop=True)  # sort by score
+        
 
     # getting best score for each Peptide
     df_all = df_all.drop_duplicates(subset='Peptide')
@@ -167,6 +161,9 @@ def peptide_level(df_all, peptide_list_df, narrow, pair):
     logging.info("Doing peptide-stem level competition.")
     
     if not pair:
+        df_all['original_target'] = df_all['Peptide']
+    
+    else:
         if type(peptide_list_df) == list:
             df_all['original_target'] = df_all['Peptide']
             for i in range(len(peptide_list_df)):
@@ -196,72 +193,21 @@ def peptide_level(df_all, peptide_list_df, narrow, pair):
             df_all.loc[df_all.Label == -1,
                        'original_target'] = df_all_sub['original_target'].tolist()
             
-        if narrow:  
-            def extract_and_sum_floats(text):
-                floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
-                float_sum = sum(float(val) for val in floats)
-                return(float_sum)
-            
-            df_all['total_mod_mass'] = df_all['original_target'].apply(extract_and_sum_floats)
-            df_all['original_target'] = df_all['original_target'].str.replace(
-                "\\[|\\]|\\.|\\d+", "", regex=True)
-            df_all = df_all.drop_duplicates(subset=['original_target','total_mod_mass'])
-            
-        else:
-            df_all['original_target'] = df_all['original_target'].str.replace(
-                "\\[|\\]|\\.|\\d+", "", regex=True)
-            df_all = df_all.drop_duplicates(subset='original_target')
-            
-    #completedly different protocol for pairing   
+    if narrow:  
+        def extract_and_sum_floats(text):
+            floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
+            float_sum = sum(float(val) for val in floats)
+            return(float_sum)
+        
+        df_all['total_mod_mass'] = df_all['original_target'].apply(extract_and_sum_floats)
+        df_all['original_target'] = df_all['original_target'].str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True)
+        df_all = df_all.drop_duplicates(subset=['original_target','total_mod_mass'])
+        
     else:
-        df_all = df_all.sample(frac=1).reset_index(
-            drop=True)
-        
-        # Define a function to sort a string alphabetically
-        def sort_string(s):
-            return ''.join(sorted(s))
-
-        df_all['sorted_Peptide'] = df_all['Peptide'].str.replace(
-            "\\[|\\]|\\.|\\d+", "", regex=True).apply(sort_string)
-        
-        if narrow:
-            def extract_and_sum_floats(text):
-                floats = re.findall(r'[-+]?\d*\.\d+|\d+', text)
-                float_sum = sum(float(val) for val in floats)
-                return(float_sum)
-            
-            df_all['total_mod_mass'] = df_all['Peptide'].apply(extract_and_sum_floats)
-            
-            # Create a new Series that counts duplicates based on columns
-            df_all['id'] = df_all.groupby(['sorted_Peptide', 'total_mod_mass', 'Label']).cumcount() + 1
-            
-            if 'SVM_score' in df_all.columns:
-                df_all = df_all.sort_values(by='SVM_score', ascending=False).reset_index(
-                    drop=True)  # sort by score
-            elif 'TailorScore' in df_all.columns:
-                df_all = df_all.sort_values(by='TailorScore', ascending=False).reset_index(
-                    drop=True)  # sort by score
-            else:
-                df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
-                    drop=True)  # sort by score
-            
-            df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'total_mod_mass', 'id'])
-            
-        else:
-            # Create a new Series that counts duplicates based on columns
-            df_all['id'] = df_all.groupby(['sorted_Peptide', 'Label']).cumcount() + 1
-            
-            if 'SVM_score' in df_all.columns:
-                df_all = df_all.sort_values(by='SVM_score', ascending=False).reset_index(
-                    drop=True)  # sort by score
-            elif 'TailorScore' in df_all.columns:
-                df_all = df_all.sort_values(by='TailorScore', ascending=False).reset_index(
-                    drop=True)  # sort by score
-            else:
-                df_all = df_all.sort_values(by='XCorr', ascending=False).reset_index(
-                    drop=True)  # sort by score
-            
-            df_all = df_all.drop_duplicates(subset = ['sorted_Peptide', 'id'])
+        df_all['original_target'] = df_all['original_target'].str.replace(
+            "\\[|\\]|\\.|\\d+", "", regex=True)
+        df_all = df_all.drop_duplicates(subset='original_target')
 
     df_all.drop(['original_target', 'total_mod_mass', 'sorted_Peptide', 'id', 'rank'], axis=1, inplace=True, errors='ignore')
     return(df_all)
@@ -408,7 +354,7 @@ def do_scale(df_all, df_extra=None):
 ################################################################################################
 
 
-def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p=0.5, kernel='linear', alpha=0.01, train_alpha=0.01, degree=None, remove=None, top_positive=True, mult=1):
+def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p=0.5, kernel='linear', alpha=0.01, train_alpha=0.01, degree=None, remove=None, top_positive=True, mult=1, initial_dir='XCorr'):
     '''
     
 
@@ -458,16 +404,9 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     train_df = pd.concat([train_all, train_targets]).reset_index(drop=True)
     train_df = train_df.sample(frac=1).reset_index(drop=True)
         
-    if 'SVM_score' in train_df.columns:
-        train_df = train_df.sort_values(
-            by='SVM_score', ascending=False).reset_index(drop=True)
-    elif 'TailorScore' in train_df.columns:
-        train_df = train_df.sort_values(
-            by='TailorScore', ascending=False).reset_index(drop=True)
-    else:
-        train_df = train_df.sort_values(
-            by='XCorr', ascending=False).reset_index(drop=True)
-
+    train_df = train_df.sort_values(
+        by=initial_dir, ascending=False).reset_index(drop=True)
+        
     #real df
     real_df = df_all[~(df_all.index.isin(train_all.index))
                      ].copy().reset_index(drop=True)
