@@ -214,7 +214,7 @@ def main():
             initial_dir = str(sys.argv[0])
             sys.argv = sys.argv[1:]
         elif (next_arg == "--score"):
-            score = str(sys.argv[0]).spli(',')
+            score = str(sys.argv[0]).split(',')
             sys.argv = sys.argv[1:]
         elif (next_arg == "--dynamic_competition"):
             if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
