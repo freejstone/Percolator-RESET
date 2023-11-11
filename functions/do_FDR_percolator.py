@@ -50,7 +50,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --overwrite <T/F> A boolean determining whether do_FDR_percolator.py should ovewrite the present files in the directory. Default = F.
     --seed <int> Random seed. Default = int(datetime.now().timestamp()).
     --p_init <float> The proportion of decoys to use as the informative decoy set. Default = 0.5
-    --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Default = F.
+    --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Only relevant for --narrow F. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
     --pair <T/F> A boolean determining whether target-decoy should be done using search file or not. Default = F.
     --dynamic_competition <T/F> A boolean determining whether dynamic competition is first required. If not, it is assumed that the competition has been completed externally. If False, only a single search file in pin format is required. Default = T.
