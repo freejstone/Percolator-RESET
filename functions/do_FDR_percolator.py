@@ -311,6 +311,7 @@ def main():
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
+        PSMs.drop('rank', inplace = True, axis = 1)
 
 
     else:
@@ -349,6 +350,7 @@ def main():
         PSMs['rank'] = PSMs['SpecId'].apply(
             lambda x: int(x[-1]))
         PSMs = PSMs[PSMs['rank'] == 1].reset_index(drop=True)
+        PSMs.drop('rank', inplace = True, axis = 1)
         
         if dynamic_competition:
             #doing multi peptide level competition
