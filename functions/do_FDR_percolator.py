@@ -329,7 +329,7 @@ def main():
             data_dfs[1][['SpecId'] + scores_list], how='left', on='SpecId')
         
         sys.stderr.write("Averaging the scores: %s. \n" %(', '.join(scores_list)))
-        logging.info("Averaging the scores." %(', '.join(scores_list)))
+        logging.info("Averaging the scores: %s." %(', '.join(scores_list)))
         
         for s in scores_list:
             if s + '_x' in data_dfs[0].columns:             
