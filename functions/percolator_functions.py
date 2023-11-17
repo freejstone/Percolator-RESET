@@ -149,8 +149,16 @@ def peptide_level(df_all, peptide_list_df, narrow, pair, initial_dir):
 
     df_all = df_all.sample(frac=1).reset_index(
         drop=True)  # break ties randomly
-
-    df_all = df_all.sort_values(by=initial_dir, ascending=False).reset_index(
+    
+    get_columns = df_all.columns[df_all.columns.str.contains(initial_dir, case=False)]
+    
+    if len(get_columns) > 0:
+        initial_dir_case_insensitive = df_all.columns[df_all.columns.str.contains(initial_dir, case=False)][0]
+    else:
+        sys.exit("--initial_dir %s not detected. \n" %(initial_dir))
+        
+    
+    df_all = df_all.sort_values(by=initial_dir_case_insensitive, ascending=False).reset_index(
         drop=True)  # sort by score
         
 
@@ -403,9 +411,16 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
 
     train_df = pd.concat([train_all, train_targets]).reset_index(drop=True)
     train_df = train_df.sample(frac=1).reset_index(drop=True)
-        
+    
+    get_columns = train_df.columns[train_df.columns.str.contains(initial_dir, case=False)]
+    
+    if len(get_columns) > 0:
+        initial_dir_case_insensitive = train_df.columns[train_df.columns.str.contains(initial_dir, case=False)][0]
+    else:
+        sys.exit("--initial_dir %s not detected. \n" %(initial_dir))
+    
     train_df = train_df.sort_values(
-        by=initial_dir, ascending=False).reset_index(drop=True)
+        by=initial_dir_case_insensitive, ascending=False).reset_index(drop=True)
         
     #real df
     real_df = df_all[~(df_all.index.isin(train_all.index))

@@ -83,6 +83,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Only relevant for --narrow F. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
     --pair <T/F> A boolean determining whether explicit head-to-head competition using target-decoy pairing should be used. Default = T.
+    --reverse <T/F> For Comet, a boolean idicating whether decoy peptides are obtained by reversing the target peptides (keeping C-teriminal fixed). If T, peptide pairing can be done without a user supplied peptide list. Default = F.
     --initial_dir <str> A string indicating which column will be the initial direction that defines the positive set for training and the peptide-level competition. Default = 'XCorr'.
     --score <str> A comma-separated list of calibrated scores that need averaging for the two-decoy database version of RESET (the same target PSM may have different scores depending on the decoy database used). Default = ''.
     --dynamic_competition <T/F> A boolean determining whether dynamic competition is first required. If not, it is assumed that the competition has been completed externally. If False, only a single search file in pin format is required. Default = T.
@@ -117,6 +118,7 @@ def main():
     score = ['']
     dynamic_competition = True
     mult = None
+    reverse= False
     command_line = ' '.join(sys.argv)
 
     # Parse the command line.
@@ -225,6 +227,15 @@ def main():
                 sys.stderr.write("Invalid argument for --dynamic_competition")
                 sys.exit(1)
             sys.argv = sys.argv[1:]
+        elif (next_arg == "--reverse"):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                reverse = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                reverse = False
+            else:
+                sys.stderr.write("Invalid argument for --reverse")
+                sys.exit(1)
+            sys.argv = sys.argv[1:]
         elif (next_arg == '--mult'):
             mult = int(sys.argv[0])
             sys.argv = sys.argv[1:]
@@ -234,7 +245,7 @@ def main():
     if (len(sys.argv) == 2):
         search_files = str(sys.argv[0]).split(',')
         td_lists = str(sys.argv[1]).split(',')
-    elif ((len(sys.argv) == 1 and not dynamic_competition) or (len(sys.argv) == 1 and not pair)):
+    elif ((len(sys.argv) == 1 and not dynamic_competition) or (len(sys.argv) == 1 and not pair) or (len(sys.argv) == 1 and reverse)):
         search_files = str(sys.argv[0]).split(',')
     else:
         #sys.stderr.write('Version: ' + str(__version__) + " \n")
@@ -271,7 +282,7 @@ def main():
         sys.stderr.write("Skipping dynamic level competition (and assuming competition has already been performed). \n")
         logging.info("Skipping dynamic level competition (and assuming competition has already been performed).")
 
-    if pair:
+    if pair and not reverse:
         sys.stderr.write("Reading in peptide list(s). \n")
         logging.info("Reading in search file(s).")
         peptide_list_dfs = []
@@ -281,12 +292,72 @@ def main():
                 peptide_list_df.rename(columns={'decoy(s)': 'decoy'}, inplace=True)
             peptide_list_df.drop_duplicates(inplace=True)
             peptide_list_dfs.append(peptide_list_df)
+    elif pair and reverse:
+        sys.stderr.write("Pairing target and decoy peptides. \n")
+        logging.info("Pairing target and decoy peptides.")
+        
+        peptide_list_dfs = []
+        for i in range(max(int(len(data_dfs)/2), 1)):
+            
+            j = int(i + len(data_dfs)/2)
+            
+            target_columns = []
+            decoy_columns = []
+            
+            target_columns += data_dfs[i].Peptide[data_dfs[i].Label == 1].to_list()
+            decoy_columns += data_dfs[j].Peptide[data_dfs[j].Label == -1].to_list()
+            
+            target_peptide_list = pd.Series(target_columns, name = 'target')
+            decoy_peptide_list = pd.Series(decoy_columns, name = 'decoy')
+            
+            decoy_pairs = target_peptide_list.apply(uf.reverse_sequence)
+            target_pairs = decoy_peptide_list.apply(uf.reverse_sequence)
+            
+            target_peptide_list = pd.DataFrame(zip(target_peptide_list, decoy_pairs), columns = ['target', 'decoy'])
+            decoy_peptide_list = pd.DataFrame(zip(target_pairs, decoy_peptide_list), columns = ['target', 'decoy'])
+            
+            peptide_list_df = pd.concat([target_peptide_list, decoy_peptide_list])
+            
+            peptide_list_df = peptide_list_df.reset_index(drop = True)
+            peptide_list_df['target'] = peptide_list_df['target'].str.replace("n", "").str.replace("c", "")
+            peptide_list_df['decoy'] = peptide_list_df['decoy'].str.replace("n", "").str.replace("c", "")
+            
+            peptide_list_df.loc[peptide_list_df['target'].str.startswith('['), 'target'] = uf.check_n_term(peptide_list_df['target'][peptide_list_df['target'].str.startswith('[')])
+            peptide_list_df.loc[peptide_list_df['decoy'].str.startswith('['), 'decoy'] = uf.check_n_term(peptide_list_df['decoy'][peptide_list_df['decoy'].str.startswith('[')])
+            
+            peptide_list_df.drop_duplicates(['target', 'decoy'], inplace = True)
+            
+            peptide_list_dfs.append(peptide_list_df)
+            
+            #to clean the peptide format so it is like tide/msfragger....where variable mods at terminals are not given
+            
+            data_dfs[i]['Peptide'] = data_dfs[i]['Peptide'].str.replace("n", "").str.replace("c", "")
+            data_dfs[i].loc[data_dfs[i]['Peptide'].str.startswith('['), 'Peptide'] = uf.check_n_term(data_dfs[i]['Peptide'][data_dfs[i]['Peptide'].str.startswith('[')])
+            if (i != j):
+                data_dfs[j]['Peptide'] = data_dfs[j]['Peptide'].str.replace("n", "").str.replace("c", "")
+                data_dfs[j].loc[data_dfs[j]['Peptide'].str.startswith('['), 'Peptide'] = uf.check_n_term(data_dfs[j]['Peptide'][data_dfs[j]['Peptide'].str.startswith('[')])
+                
+            if initial_dir.lower() == 'lnExpect'.lower():
+                get_columns = data_dfs[i].columns[data_dfs[i].columns.str.contains(initial_dir, case=False)]
+                
+                if len(get_columns) > 0:
+                    initial_dir_case_insensitive = data_dfs[i].columns[data_dfs[i].columns.str.contains(initial_dir, case=False)][0]
+                else:
+                    sys.exit("--initial_dir %s not detected. \n" %(initial_dir))
+                
+                
+                sys.stderr.write("Taking the negative of lnExpect. \n")
+                logging.info("Taking the negative of lnExpect.")
+                data_dfs[i][initial_dir_case_insensitive] = -data_dfs[i][initial_dir_case_insensitive]
+                if (i != j): 
+                    data_dfs[j][initial_dir_case_insensitive] = -data_dfs[j][initial_dir_case_insensitive]
             
     else:
         if dynamic_competition:
             sys.stderr.write("No peptide-list pairing provided. Not performing explicit head-to-head competition. \n")
             logging.info("No peptide-list pairing provided. Not performing explicit head-to-head competition.")
-        df_all = data_dfs[0]
+        else:
+            df_all = data_dfs[0]
 
     if single_decoy:
         

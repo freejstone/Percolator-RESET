@@ -16,6 +16,7 @@ import pandas as pd
 import logging
 import sys
 import gzip
+import re
 #########################################################################################################
 
 
@@ -253,4 +254,63 @@ def score_PSMs(target_decoys, scale, model, columns_trained):
     target_decoys['SVM_score'] = new_scores
 
     return(target_decoys)
+#########################################################################################################
 
+def reverse_sequence(sequence):
+    '''
+    Parameters
+    ----------
+    sequence : Pandas Series
+        List of sequence with variable modifications in tide-search format.
+
+    Returns
+    -------
+    Recovers target sequences.
+    '''
+    results = re.findall(
+        '[a-zA-Z]\\[\\d+.\\d+\\]\\[\\d+.\\d+\\]|[a-zA-Z]\\[\\d+.\\d+\\]|[a-zA-Z]\\[\\d+\\]|[a-zA-Z]', sequence)
+    if 'n' in sequence:
+        n_term_mass_mod_list = re.findall(r"(n\[\d+.\d+\])", sequence)
+        if len(n_term_mass_mod_list) > 0:
+            n_term_mass_mod = re.findall(r"(\d+.\d+)", n_term_mass_mod_list[0])
+            results = results[1:]
+            
+    if 'c' in sequence:
+        c_term_mass_mod_list = re.findall(r"(c\[\d+.\d+\])", sequence)
+        if len(c_term_mass_mod_list) > 0:
+            c_term_mass_mod = re.findall(r"(\d+.\d+)", c_term_mass_mod_list[0])
+            results = results[:-1]
+
+
+    results = results[-2::-1] + [results[-1]]
+
+    if 'n' in sequence:
+        results[0] = results[0] + '[' + n_term_mass_mod[0] + ']'
+
+    if 'c' in sequence:
+        results[-1] = results[-1] + '[' + c_term_mass_mod[0] + ']'
+
+    results = ''.join(results)
+    return(results)
+#########################################################################################################
+
+
+def check_n_term(sequences):
+    '''
+    Parameters
+    ----------
+    sequences : Pandas series
+        List of sequence with variable modifications.
+
+    Returns
+    -------
+    List of sequence with n-terminal modification properly relocated.
+
+    '''
+
+    n_term_bool = sequences.str.startswith('[')
+    results = sequences[n_term_bool].str.split(pat=r'(\])', n=1, expand=True)
+
+    results = results.apply(
+        lambda x: x[2][0] + x[0][::] + x[1][::] + x[2][1:], axis=1)
+    return(results)
