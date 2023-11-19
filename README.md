@@ -21,6 +21,14 @@ A note to Lukas: for the development in C, please refer to the link [here](https
 * run_extra_decoy.sh: Conducts Percolator-RESET+ files from on files from narrow_search_sep.sh and open_search_sep.sh.
 * run_single_decoy_var.sh: Conducts Percolator-RESET files from on files from narrow_search.sh and open_search.sh, with varying seeds.
 * run_extra_decoy_var.sh: Conducts Percolator-RESET+ files from on files from narrow_search_sep.sh and open_search_sep.sh, with varying seeds.
+* create_decoy_database.R: Produces the target-decoy protein fasta files (1 reversed and 1 cyclically permuted) used with MSFragger searches.
+* get_frag_tol.R: Adds the fragment tolerances determined by Tide to the parameter files used with MSFragger.
+* narrow_search_msfragger.sh: Do narrow searches using MSFragger.
+* open_search_msfragger.sh: Do open searches using MSFragger.
+* remove_duplicate_decoys.R: Removing peptides that are both 'targets' and 'decoys' and are thus ill-defined from MSFragger searches.
+* run_percolator_msfragger.sh: Running Percolator on the MSFragger searches.
+* run_single_msfragger.sh: Running Percolator-RESET on MSFragger searches.
+* run_extra_decoy_msfragger.sh: Running Percolator-RESET+ on MSFragger searches.
 * percolator_summary.R: Does peptide/stem-level competition for Percolator.
 
 For files under entrapment_runs/:
@@ -35,4 +43,6 @@ For files under entrapment_runs/:
 * run_single_decoy.sh: Conducts Percolator-RESET files from on files from tide-search.sh and tide-search-open.sh.
 * run_extra_decoy.sh: Conducts Percolator-RESET+ files from on files from tide-search.sh and tide-search-open.sh.
 * percolator_results.R: Does peptide/stem-level competition for Percolator.
+* run_single_decoy_no_pair.sh: Conducts Percolator-RESET files from on files from tide-search.sh and tide-search-open.sh without target-decoy pairing.
+* run_extra_decoy_no_pair.sh: Conducts Percolator-RESET+ files from on files from tide-search.sh and tide-search-open.sh without target-decoy pairing.
 * percolator_with_fdr_results.R: Summarises results from our method Percolator RESET.
