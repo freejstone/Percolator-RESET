@@ -226,7 +226,7 @@ for (dataset in datasets) {
 }
 
 
-write.csv(df_all, paste('percolator_msfragger_all.csv', sep = ''))
+write.csv(df_all, paste('results/percolator_msfragger_all.csv', sep = ''))
 
 ##############################################################################################################################
 
