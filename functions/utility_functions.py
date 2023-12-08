@@ -193,20 +193,20 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     targets = targets.sample(frac=1)
     
     #getting charge
-    targets['charge'] = targets['SpecId'].apply(
+    targets['charge_temp'] = targets['SpecId'].apply(
         lambda x: int(x[-3]))
     
     #clustering the PSMs matched to the same peptide according to mass
     targets = targets.sort_values(
         by='ExpMass', ascending=True).reset_index(drop=True)
     targets["mass_plus"] = targets.groupby('original_target_sequence', group_keys=False).apply(
-        lambda x: x.ExpMass.shift(1) + np.maximum(isolation_window[0]*x.charge, isolation_window[1]*x.charge.shift(1)))
+        lambda x: x.ExpMass.shift(1) + np.maximum(isolation_window[0]*x.charge_temp, isolation_window[1]*x.charge_temp.shift(1)))
     targets.loc[targets["mass_plus"].isna(), "mass_plus"] = -np.Inf
     targets["condition"] = targets["ExpMass"] > targets["mass_plus"]
     targets["cluster"] = targets.groupby(
         'original_target_sequence', group_keys=False).condition.cumsum()
     
-    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
+    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge_temp', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
     
     scaled_target.loc[:,:] = scale.transform(scaled_target)
     
@@ -219,7 +219,7 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     #take best PSM according to cluster and sequence with modification
     targets = targets.drop_duplicates(subset=['Peptide', 'cluster'])
     
-    targets = targets.drop(['charge', 'condition', 'mass_plus', 'cluster', 'original_target_sequence'], axis = 1)
+    targets = targets.drop(['charge_temp', 'condition', 'mass_plus', 'cluster', 'original_target_sequence'], axis = 1)
 
     return(targets)
 
