@@ -69,7 +69,6 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
   Options:
       
     --FDR_threshold <float> The FDR threshold. Default = 0.01.
-    --narrow <T/F> A boolean determining whether the search files used a narrow or open precursor tolerance. Default = T. 
     --folds <int> The number of folds for determining the class weights. Default = 3.
     --total_iter <int> The number of SVM training iterations. Default = 5.
     --train_FDR_threshold <float> The FDR threshold used to define positive training set. Default = 0.01.
@@ -80,7 +79,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --overwrite <T/F> A boolean determining whether do_FDR_percolator.py should ovewrite the present files in the directory. Default = F.
     --seed <int> Random seed. Default = int(datetime.now().timestamp()).
     --p_init <float> The proportion of decoys to use as the informative decoy set. Default = 0.5
-    --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Only relevant for --narrow F. Default = F.
+    --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
     --pair <T/F> A boolean determining whether explicit head-to-head competition using target-decoy pairing should be used. Default = T.
     --reverse <T/F> For Comet, a boolean idicating whether decoy peptides are obtained by reversing the target peptides (keeping C-teriminal fixed). If T, peptide pairing can be done without a user supplied peptide list. Default = F.
@@ -98,7 +97,6 @@ def main():
 
     # Set default values for parameters.
     FDR_threshold = 0.01
-    narrow = True
     folds = 3
     total_iter = 5
     train_FDR_threshold = 0.01
@@ -128,15 +126,6 @@ def main():
         sys.argv = sys.argv[1:]
         if (next_arg == "--FDR_threshold"):
             FDR_threshold = float(sys.argv[0])
-            sys.argv = sys.argv[1:]
-        elif (next_arg == "--narrow"):
-            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
-                narrow = True
-            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
-                narrow = False
-            else:
-                sys.stderr.write("Invalid argument for --narrow")
-                sys.exit(1)
             sys.argv = sys.argv[1:]
         elif (next_arg == "--folds"):
             folds = int(sys.argv[0])
@@ -276,6 +265,7 @@ def main():
         data_df = uf.read_pin(search_file)
         #removing flanking aa
         data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
+        data_df['Proteins'] = data_df['Proteins'].str.replace('\t', ',')
         data_dfs.append(data_df)
         
     if not dynamic_competition:
@@ -375,10 +365,10 @@ def main():
             #doing peptide level competition
             if pair:
                 df_all = pf.peptide_level(
-                    data_dfs[0].copy(), peptide_list_dfs[0].copy(), narrow, pair, initial_dir)
+                    data_dfs[0].copy(), peptide_list_dfs[0].copy(), pair, initial_dir)
             else:
                 df_all = pf.peptide_level(
-                    data_dfs[0].copy(), None, narrow, pair, initial_dir)
+                    data_dfs[0].copy(), None, pair, initial_dir)
         
         
         PSMs = data_dfs[0].copy()
@@ -431,10 +421,10 @@ def main():
             #doing multi peptide level competition
             if pair:
                 df_all = pf.peptide_level(
-                    data_df.copy(), peptide_list_dfs.copy(), narrow, pair, initial_dir)
+                    data_df.copy(), peptide_list_dfs.copy(), pair, initial_dir)
             else:
                 df_all = pf.peptide_level(
-                    data_df.copy(), None, narrow, pair, initial_dir)
+                    data_df.copy(), None, pair, initial_dir)
 
     #applying scaling
     df_all_scale, scale = pf.do_scale(df_all.copy())
@@ -476,7 +466,7 @@ def main():
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
     
-    if df_new.shape[0] > 0 and get_psms and (narrow == False) and (dynamic_competition):
+    if df_new.shape[0] > 0 and get_psms and (dynamic_competition):
         sys.stderr.write(
             "Reporting all PSMs within each mass-cluster associated to a discovered peptide. \n")
         logging.info(
