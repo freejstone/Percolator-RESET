@@ -80,7 +80,7 @@ for (dataset in datasets) {
 }
 
 
-write.csv(df_all, paste('percolator_all.csv', sep = ''))
+write.csv(df_all, paste('results/percolator_all.csv', sep = ''))
 
 
 ##################################################################################################################################
@@ -110,23 +110,11 @@ for (dataset in datasets) {
     decoys$target.decoy = 'decoy'
     
     targets$original_target_sequence = substring(targets$peptide, 3, nchar(targets$peptide) - 2)
-    mass = ((regmatches(targets$original_target_sequence,
-                                        gregexpr("[[:digit:]]+\\.*[[:digit:]]*",targets$original_target_sequence))))
-    mass = lapply(mass, as.numeric)
-    mass = lapply(mass, sum)
-    mass = unlist(mass)
     targets$original_target_sequence = gsub('[0-9]+|\\.|\\[|\\]', '', targets$original_target_sequence)
-    targets$original_target_sequence = paste(targets$original_target_sequence, mass)
     
     decoys$original_target_sequence = substring(decoys$peptide, 3, nchar(decoys$peptide) - 2)
-    mass = ((regmatches(decoys$original_target_sequence,
-                                        gregexpr("[[:digit:]]+\\.*[[:digit:]]*",decoys$original_target_sequence))))
-    mass = lapply(mass, as.numeric)
-    mass = lapply(mass, sum)
-    mass = unlist(mass)
     decoys$original_target_sequence = gsub('[0-9]+|\\.|\\[|\\]', '', decoys$original_target_sequence)
     decoys$original_target_sequence = peptide_list$target[match(decoys$original_target_sequence, peptide_list$decoy)]
-    decoys$original_target_sequence = paste(decoys$original_target_sequence, mass)
     
     target_decoys = rbind(targets, decoys)
     
@@ -253,22 +241,12 @@ for (dataset in datasets) {
     decoys$target.decoy = 'decoy'
     
     targets$original_target_sequence = substring(targets$peptide, 3, nchar(targets$peptide) - 2)
-    mass = ((regmatches(targets$original_target_sequence,
-                        gregexpr("[[:digit:]]+\\.*[[:digit:]]*",targets$original_target_sequence))))
-    mass = lapply(mass, as.numeric)
-    mass = lapply(mass, sum)
-    mass = unlist(mass)
     targets$original_target_sequence = gsub('[0-9]+|\\.|\\[|\\]', '', targets$original_target_sequence)
-    targets$original_target_sequence = paste(targets$original_target_sequence, mass)
     
     decoys$original_target_sequence = substring(decoys$peptide, 3, nchar(decoys$peptide) - 2)
-    mass = ((regmatches(decoys$original_target_sequence,
-                        gregexpr("[[:digit:]]+\\.*[[:digit:]]*",decoys$original_target_sequence))))
-    mass = lapply(mass, as.numeric)
-    mass = lapply(mass, sum)
-    mass = unlist(mass)
     decoys$original_target_sequence = gsub('[0-9]+|\\.|\\[|\\]', '', decoys$original_target_sequence)
-    decoys$original_target_sequence = paste(decoys$original_target_sequence, mass)
+    
+    target_decoys = rbind(targets, decoys)
     
     target_decoys = rbind(targets, decoys)
     
