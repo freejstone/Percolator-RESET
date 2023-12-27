@@ -17,7 +17,7 @@ import logging
 from datetime import datetime
 import utility_functions as uf
 import percolator_functions as pf
-__version__ = version.get_versions()['version']
+#__version__ = version.get_versions()['_version']
 
 USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-decoy matchings>
 
@@ -248,8 +248,8 @@ def main():
         np.random.seed(seed)
 
     #print version
-    logging.info('Version: ' + str(__version__))
-    sys.stderr.write('Version: ' + str(__version__) + " \n")
+    #logging.info('Version: ' + str(__version__))
+    #sys.stderr.write('Version: ' + str(__version__) + " \n")
 
     #print meta information, checking directory and printing warnings
     uf.print_info(command_line, output_dir, file_root, overwrite, search_files)
