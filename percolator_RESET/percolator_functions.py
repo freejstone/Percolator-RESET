@@ -10,7 +10,7 @@ super_percolator main functions
 
 import numpy as np
 import pandas as pd
-import utility_functions as uf
+from percolator_RESET import utility_functions as uf
 import logging
 import sys
 from sklearn import svm
