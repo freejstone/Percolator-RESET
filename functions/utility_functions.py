@@ -22,23 +22,25 @@ import re
 
 def print_info(command_line, output_dir, file_root, overwrite, search_files):
     #check if output directory exists, if not create and store log file there.
+    ext = ".log.txt"
+    level_message = '%(levelname)s: %(message)s'
     if os.path.isdir(output_dir):
-        if os.path.exists(path=output_dir + "/" + file_root + ".log.txt") and overwrite:
-            os.remove(output_dir + "/" + file_root + ".log.txt")
-            logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
-                                level=logging.DEBUG, format='%(levelname)s: %(message)s', force=True)
-        elif os.path.exists(path=output_dir + "/" + file_root + ".log.txt") and not overwrite:
-            log_file = output_dir + "/" + file_root + ".log.txt"
+        if os.path.exists(path=output_dir + "/" + file_root + ext) and overwrite:
+            os.remove(output_dir + "/" + file_root + ext)
+            logging.basicConfig(filename=output_dir + "/" + file_root + ext,
+                                level=logging.DEBUG, format=level_message, force=True)
+        elif os.path.exists(path=output_dir + "/" + file_root + ext) and not overwrite:
+            log_file = output_dir + "/" + file_root + ext
             sys.exit("The file %s already exists and cannot be overwritten. Use --overwrite T to replace or choose a different output file name. \n" % (log_file))
         else:
             sys.stderr.write("check")
-            logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
-                                level=logging.DEBUG, format='%(levelname)s: %(message)s', force=True)
+            logging.basicConfig(filename=output_dir + "/" + file_root + ext,
+                                level=logging.DEBUG, format=level_message, force=True)
     else:
         sys.stderr.write("check1")
         os.mkdir(output_dir)
-        logging.basicConfig(filename=output_dir + "/" + file_root + ".log.txt",
-                            level=logging.DEBUG, format='%(levelname)s: %(message)s', force=True)
+        logging.basicConfig(filename=output_dir + "/" + file_root + ext,
+                            level=logging.DEBUG, format=level_message, force=True)
 
     #print CPU info
     logging.info('CPU: ' + str(platform.platform()))
@@ -55,7 +57,7 @@ def print_info(command_line, output_dir, file_root, overwrite, search_files):
     sys.stderr.write("Successfully read in arguments. \n")
     logging.info("Successfully read in arguments")
 
-    if type(search_files) == list:
+    if isinstance(search_files, list):
         for i in search_files:
             if not os.path.isfile(i):
                 logging.info("%s does not exist." %(i))
@@ -70,7 +72,7 @@ def TDC_flex_c(decoy_wins, target_wins, BC1=1, c=1/2, lam=1/2):
     ----------
     decoy_wins : boolean series
         indicates the position of the decoy wins.
-    target_wins : booolean series
+    target_wins : boolean series
         indicates the position of the target wins.
     BC1 : float, optional
         The penalty applied to the estimated number of decoys. The default is 1.
@@ -183,7 +185,6 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     #get targets
     targets = target_decoys[target_decoys['Label'] == 1].copy()
     
-    #targets['original_target_sequence'] = targets['Peptide']
     targets['original_target_sequence'] = targets['Peptide'].str.replace(
         "\\[|\\]|\\.|\\d+", "", regex=True)
         

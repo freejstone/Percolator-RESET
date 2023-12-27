@@ -42,9 +42,9 @@ def PSM_level(target_file, decoy_file, top=1):
     databases. Removes enzInt feature.
 
     '''
-    if type(decoy_file) == type(None):
+    if decoy_file is None:
         df = target_file
-    elif type(decoy_file) == list:
+    elif isinstance(decoy_file, list):
         for i in range(len(decoy_file)):
             decoy_file[i]['filename'] = i
         decoy_file_combined = pd.concat(decoy_file)
@@ -65,14 +65,7 @@ def PSM_level(target_file, decoy_file, top=1):
         "Fixing up lnNumSP so that it is with respect to the target database.\n")
     values_x = df.loc[df['Label'] == 1].groupby(
         ["ScanNr", "ExpMass", "Charge"])['lnNumSP'].first()
-    #values_y = df.loc[df['Label'] == -
-    #                  1].groupby(["ScanNr", "ExpMass", "Charge"])['lnNumSP'].unique()
-    #values_y = values_y.apply(lambda x: np.log(sum(np.exp(x))) if len(x)==2 else np.log(2*np.exp(x[0])))
-    #values_y = np.exp(values_y)
-    #values_x = np.exp(values_x)
-    #values_all = values_x.add(values_y, fill_value=0)
-    #values_all = np.log(values_all)
-    #values_all[values_all.isna()] = 0
+   
     df['lnNumSP'] = df.apply(lambda x: values_x[(
         x['ScanNr'], x['ExpMass'], x['Charge'])], axis=1)
 
@@ -128,7 +121,7 @@ def peptide_level(df_all, peptide_list_df, pair, initial_dir):
     Parameters
     ----------
     df_all : Pandas Dataframe
-        Concantenated search file.
+        Concatenated search file.
     peptide_list_df : Pandas Dataframe
         Tide-index target-decoy peptide pairs.
     Returns
@@ -169,7 +162,7 @@ def peptide_level(df_all, peptide_list_df, pair, initial_dir):
         df_all['original_target'] = df_all['Peptide']
     
     else:
-        if type(peptide_list_df) == list:
+        if isinstance(peptide_list_df, list):
             df_all['original_target'] = df_all['Peptide']
             for i in range(len(peptide_list_df)):
                 df_all_sub = df_all[(df_all.Label == -1) &
@@ -261,7 +254,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
 
     '''
 
-    if not kernel in ['linear', 'poly', 'rbf']:
+    if kernel not in ['linear', 'poly', 'rbf']:
         raise ValueError("kernel type not accepted.")
 
     class_weight = [{-1: C_neg, 1: C_pos}
@@ -340,7 +333,7 @@ def do_scale(df_all, df_extra=None):
     df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
         df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
 
-    if type(df_extra) == type(None):
+    if df_extra is None:
         return(df_all, scale)
     else:
         df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
@@ -422,7 +415,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     SVM_train_features = train_df.drop(
         ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
     
-    if type(remove) == list:
+    if isinstance(remove, list):
         remove_list = [r for r in remove if r in SVM_train_features.columns]
         sys.stderr.write("Dropping the features from training: %s. \n" %(', '.join(remove_list)))
         logging.info("Dropping the features from training: %s." %(', '.join(remove_list)))        
@@ -560,7 +553,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         real_df_test = real_df.drop(
             ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
         
-        if type(remove) == list:
+        if isinstance(remove, list):
             remove_list = [r for r in remove if r in SVM_train_features.columns]     
             real_df_test.drop(remove_list, axis=1, inplace=True, errors='ignore')
 
@@ -597,7 +590,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
 
     df_orig['q_val'] = q_val
 
-    if type(remove) == list:
+    if isinstance(remove, list):
         train_all_test = train_all.drop(remove, axis=1, errors='ignore')
     else:
         train_all_test = train_all.copy()

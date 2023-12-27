@@ -44,7 +44,7 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
   
   -----------------------------------------------------------------------------------------------------------------------------------------------    
   
-  It is possible to run percolator RESET without explicity pairing the targets and decoys together, thus allievating the need for a peptide list.
+  It is possible to run percolator RESET without explicitly pairing the targets and decoys together, thus alleviating the need for a peptide list.
   
   For the single decoy database version of RESET:
       
@@ -74,15 +74,15 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
     --train_FDR_threshold <float> The FDR threshold used to define positive training set. Default = 0.01.
     --output_dir <str> The path to the output directory. Default = '.'
     --report_decoys <T/F> A boolean indicating whether you would like the estimating decoys to be printed as well. Default = T.
-    --file_root <str> The name of the file root when outputting results. Default = 'FDR_percoaltor'.
+    --file_root <str> The name of the file root when outputting results. Default = 'FDR_percolator'.
     --remove <str> A comma-separated list of features to remove prior to SVM trainings. Default = 'enzInt'.
-    --overwrite <T/F> A boolean determining whether do_FDR_percolator.py should ovewrite the present files in the directory. Default = F.
+    --overwrite <T/F> A boolean determining whether do_FDR_percolator.py should overwrite the present files in the directory. Default = F.
     --seed <int> Random seed. Default = int(datetime.now().timestamp()).
     --p_init <float> The proportion of decoys to use as the informative decoy set. Default = 0.5
     --get_psms <T/F> Prints out the relevant psms with distinct delta masses/variable mods associated with the discovered peptides. Default = F.
     --isolation_window <str> A comma-separated pair of numbers that describe the lower and upper isolation window. used for when get_psms = T. Default = 2,2
     --pair <T/F> A boolean determining whether explicit head-to-head competition using target-decoy pairing should be used. Default = T.
-    --reverse <T/F> For Comet, a boolean idicating whether decoy peptides are obtained by reversing the target peptides (keeping C-teriminal fixed). If T, peptide pairing can be done without a user supplied peptide list. Default = F.
+    --reverse <T/F> For Comet, a boolean indicating whether decoy peptides are obtained by reversing the target peptides (keeping C-teriminal fixed). If T, peptide pairing can be done without a user supplied peptide list. Default = F.
     --initial_dir <str> A string indicating which column will be the initial direction that defines the positive set for training and the peptide-level competition. Default = 'XCorr'.
     --score <str> A comma-separated list of calibrated scores that need averaging for the two-decoy database version of RESET (the same target PSM may have different scores depending on the decoy database used). Default = ''.
     --dynamic_competition <T/F> A boolean determining whether dynamic competition is first required. If not, it is assumed that the competition has been completed externally. If False, only a single search file in pin format is required. Default = T.
@@ -242,7 +242,7 @@ def main():
         sys.exit(1)
 
     #setting seed for reproducibility
-    if type(seed) == int:
+    if isinstance(seed, int):
         random.seed(seed)
         np.random.seed(seed)
 
@@ -445,7 +445,7 @@ def main():
     train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
 
     #do SVM
-    train_power, std_power, true_power, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
+    _, _, _, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
         0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove = remove, mult=mult, initial_dir=initial_dir)
 
     df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
