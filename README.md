@@ -8,4 +8,4 @@ A note to Lukas: for the development in C, please refer to the link [here](https
 
 For installation, download the latest release from Github, and install using pip in the same directory as setup.py using:
 
-pip install .
+`pip install .`
