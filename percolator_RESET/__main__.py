@@ -15,11 +15,11 @@ import pandas as pd
 import random
 import logging
 from datetime import datetime
-import utility_functions as uf
-import percolator_functions as pf
+from percolator_RESET import utility_functions as uf
+from percolator_RESET import percolator_functions as pf
 #__version__ = version.get_versions()['_version']
 
-USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-decoy matchings>
+USAGE = """USAGE: python3 -m percolator_RESET [options] <search files> <target-decoy matchings>
 
   This script implements the percolator RESET algorithm with FDR control. The first input is a
   comma-separated list of the search file(s) in pin format to be used. The second input is a 
@@ -39,9 +39,9 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
   
   As an example:
 
-      python3 do_FDR_percolator.py search_file1.txt peptide_list1.txt
+      python3 -m percolator_RESET search_file1.txt peptide_list1.txt
       
-      python3 do_FDR_percolator.py target_file1.txt,target_file2.txt,decoy_file1.txt,decoy_file2.txt peptide_list_1.txt,peptide_list_2.txt
+      python3 -m percolator_RESET target_file1.txt,target_file2.txt,decoy_file1.txt,decoy_file2.txt peptide_list_1.txt,peptide_list_2.txt
   
   -----------------------------------------------------------------------------------------------------------------------------------------------    
   
@@ -49,11 +49,11 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
   
   For the single decoy database version of RESET:
       
-      python3 do_FDR_percolator.py --pair F search_file1.txt
+      python3 -m percolator_RESET --pair F search_file1.txt
       
   For the two decoy database version of RESET:
       
-      python3 do_FDR_percolator.py --pair F --mult 2 search_file1.txt
+      python3 -m percolator_RESET --pair F --mult 2 search_file1.txt
       
   The --mult option here is important since the module will infer that you only used one decoy database.
   
@@ -61,11 +61,11 @@ USAGE = """USAGE: python3 do_FDR_percolator.py [options] <search files> <target-
   
   Lastly, you may want to run percolator RESET having already completed the competition step externally. In this case for single decoy RESET:
       
-      python3 do_FDR_percolator.py --dynamic_competition F search_file1.txt
+      python3 -m percolator_RESET --dynamic_competition F search_file1.txt
       
   and for two decoy RESET:
       
-      python3 do_FDR_percolator.py --dynamic_competition F --mult 2 search_file1.txt
+      python3 -m percolator_RESET --dynamic_competition F --mult 2 search_file1.txt
             
   Options:
       
