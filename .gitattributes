@@ -1,1 +1,2 @@
 functions/_version.py export-subst
+percolator_RESET/_version.py export-subst
