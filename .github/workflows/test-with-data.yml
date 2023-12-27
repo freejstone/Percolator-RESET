@@ -4,7 +4,7 @@ on:
   push:
 jobs:
   check-code-finishes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
