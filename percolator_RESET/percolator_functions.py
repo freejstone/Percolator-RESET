@@ -46,9 +46,9 @@ def PSM_level(target_file, decoy_file, top=1):
         df = target_file
     elif isinstance(decoy_file, list):
         for i in range(len(decoy_file)):
-            decoy_file[i]['filename'] = i
+            decoy_file[i]['fileindx'] = i
         decoy_file_combined = pd.concat(decoy_file)
-        target_file['filename'] = 0
+        target_file['fileindx'] = 0
         df = pd.concat([target_file, decoy_file_combined])
     else:
         df = pd.concat([decoy_file, target_file])  # combine
@@ -115,21 +115,20 @@ def PSM_level(target_file, decoy_file, top=1):
 #########################################################################################################
 
 
-def peptide_level(df_all, peptide_list_df, pair, initial_dir):
+def _get_best_peps(df_all, initial_dir):
     '''
-
     Parameters
     ----------
     df_all : Pandas Dataframe
         Concatenated search file.
-    peptide_list_df : Pandas Dataframe
-        Tide-index target-decoy peptide pairs.
+    initial_dir : To determine the best scoring peptide
+
     Returns
     -------
-    PSMs that remain after target-decoy peptide level competition.
-
+    Dataframe of best scoring peptides
+    
     '''
-
+    
     #select only top 1 PSMs
     sys.stderr.write("Taking top 1 PSMs. \n")
     logging.info("Taking top 1 PSMs.")
@@ -155,44 +154,51 @@ def peptide_level(df_all, peptide_list_df, pair, initial_dir):
     # getting best score for each Peptide
     df_all = df_all.drop_duplicates(subset='Peptide')
 
+    return(df_all)
+#########################################################################################################
+
+
+def peptide_level(df_all, peptide_list_df, pair, initial_dir):
+    '''
+
+    Parameters
+    ----------
+    df_all : Pandas Dataframe
+        Concatenated search file.
+    peptide_list_df : Pandas Dataframe
+        Tide-index target-decoy peptide pairs.
+    initial_dir : To determine the best scoring peptide
+    
+    Returns
+    -------
+    PSMs that remain after target-decoy peptide level competition.
+
+    '''
+    
+    df_all = _get_best_peps(df_all, initial_dir)
+
     sys.stderr.write("Doing peptide-stem level competition. \n")
     logging.info("Doing peptide-stem level competition.")
     
-    if not pair:
-        df_all['original_target'] = df_all['Peptide']
+    if not any(df_all.columns.str.contains('fileindx')):
+        df_all['fileindx'] = 0
     
-    else:
-        if isinstance(peptide_list_df, list):
-            df_all['original_target'] = df_all['Peptide']
-            for i in range(len(peptide_list_df)):
-                df_all_sub = df_all[(df_all.Label == -1) &
-                                    (df_all.filename == i)].copy()
-                peptide_list_df[i].rename(
-                    columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
-                df_all_sub = df_all_sub.merge(
-                    peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
-                
-                if any(df_all_sub.original_target_y.isna()):
-                    sys.exit("Some peptides in the search file do not have a pair in the peptide list. E.g. %s \n" %(df_all_sub.Peptide[df_all_sub.original_target_y.isna()].values[0])) 
-                    
-                df_all.loc[(df_all.Label == -1) & (df_all.filename == i),
-                           'original_target'] = df_all_sub['original_target_y'].tolist()
-        else:
-            df_all_sub = df_all[df_all.Label == -1].copy()
-            peptide_list_df.rename(
+    df_all['original_target'] = df_all['Peptide']
+    if pair:
+        for i in range(len(peptide_list_df)):
+            df_all_sub = df_all[(df_all.Label == -1) &
+                                (df_all.fileindx == i)].copy()
+            peptide_list_df[i].rename(
                 columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
             df_all_sub = df_all_sub.merge(
-                peptide_list_df[['original_target', 'Peptide']], how='left', on='Peptide')
+                peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
             
-            if any(df_all_sub.original_target.isna()):
-                sys.exit("Some peptides in the search file do not have a pair in the peptide list. E.g. %s \n" %(df_all_sub.Peptide[df_all_sub.original_target.isna()].values[0])) 
+            if any(df_all_sub.original_target_y.isna()):
+                sys.exit("Some peptides in the search file do not have a pair in the peptide list. E.g. %s \n" %(df_all_sub.Peptide[df_all_sub.original_target_y.isna()].values[0])) 
                 
-            df_all['original_target'] = df_all['Peptide']
-            df_all.loc[df_all.Label == -1,
-                       'original_target'] = df_all_sub['original_target'].tolist()
+            df_all.loc[(df_all.Label == -1) & (df_all.fileindx == i),
+                       'original_target'] = df_all_sub['original_target_y'].tolist()
             
-    
-    
     df_all['original_target'] = df_all['original_target'].str.replace(
         "\\[|\\]|\\.|\\d+", "", regex=True)
     df_all = df_all.drop_duplicates(subset='original_target')
@@ -330,20 +336,65 @@ def do_scale(df_all, df_extra=None):
     '''
     #scale non-binary features
     scale = StandardScaler()
-    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
-        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
+        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
 
     if df_extra is None:
         return(df_all, scale)
     else:
-        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
-            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
+            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
         return(df_all, scale, df_extra)
+#########################################################################################################
 
+
+def _get_pos_neg_sets(SVM_train_labels, train_alpha, mult, p):
+    '''
+    
+
+    Parameters
+    ----------
+    SVM_train_labels : Pandas series
+        Pseudo target and training decoy labels
+    train_alpha: float
+        For determining the positive training set
+    mult: int
+        The number of decoy databases used
+    p: float
+        The probability a decoy is selected for training
+
+    Returns
+    -------
+    The positive and negative training labels for SVM training.
+
+    '''
+    
+    #getting initial positive and negative set
+    q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
+                           SVM_train_labels == 1, BC1=1, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
+    
+    positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
+    
+    if sum(positive_set_indxs) == 0:
+        logging.info("No initial positive set: removing the +1 penalty.")
+        sys.stderr.write("No initial positive set: removing the +1 penalty.\n")
+        q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
+                               SVM_train_labels == 1, BC1=0, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
+        positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
+    
+    while sum(positive_set_indxs) == 0:
+        train_alpha = train_alpha + 0.005
+        positive_set_indxs = (SVM_train_labels == 1) & (
+            q_vals <= train_alpha)
+            
+    negative_set_indxs = (SVM_train_labels == -1)
+    
+    return(positive_set_indxs, negative_set_indxs)
+    
 ################################################################################################
 
 
-def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p=0.5, kernel='linear', alpha=0.01, train_alpha=0.01, degree=None, remove=None, top_positive=True, mult=1, initial_dir='XCorr'):
+def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01, train_alpha=0.01, remove=None, mult=1, initial_dir='XCorr'):
     '''
     
 
@@ -357,21 +408,15 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         Search file with unscaled features.
     folds : Int, optional
         The number of folds for selection of class weights. The default is 3.
-    Cs : List, optional
-        Grid of class weights. The default is [0.01, 0.1, 1, 10].
     total_iter : Int, optional
         Number of SVM training rounds. The default is 10.
     p : Float, optional
         The fraction of decoys randomly sampled from df_all that are in train_all. If more than one decoy
         index used, this fraction is only taken with respect to the first decoy index. The default is 0.5.
-    kernel : String, optional
-        Type of kernel used for SVM. The default is 'linear'.
     alpha : Float, optional
         FDR threshold. The default is 0.01.
     train_alpha : Float, optional
         Training FDR threshold for selection of positive training set. The default is 0.01.
-    degree : Int, optional
-        Degree if polynomial kernel is used. The default is None.
     remove : List, optional
         A list of features to remove from training. The default is None.
     top_positive : Bool, optional
@@ -413,7 +458,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     SVM_train_labels = train_df['Label'].copy()
     
     SVM_train_features = train_df.drop(
-        ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
+        ['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
     
     if isinstance(remove, list):
         remove_list = [r for r in remove if r in SVM_train_features.columns]
@@ -428,38 +473,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
     columns_trained = SVM_train_features.columns
 
     #getting initial positive and negative set
-    q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                           SVM_train_labels == 1, BC1=1, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
-    
-    if top_positive and ('rank' in SVM_train_features.columns):
-        positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (
-            SVM_train_features['rank'] == min(SVM_train_features['rank']))
-    else:
-        positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
-    
-    if sum(positive_set_indxs) == 0:
-        logging.info("No initial positive set: removing the +1 penalty.")
-        sys.stderr.write("No initial positive set: removing the +1 penalty.\n")
-        q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                               SVM_train_labels == 1, BC1=0, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
-        if top_positive and ('rank' in SVM_train_features.columns):
-            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (
-                SVM_train_features['rank'] == min(SVM_train_features['rank']))
-        else:
-            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha)
-    
-    while sum(positive_set_indxs) == 0:
-        train_alpha = train_alpha + 0.005
-
-        if top_positive and ('rank' in SVM_train_features.columns):
-            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (
-                SVM_train_features['rank'] == min(SVM_train_features['rank']))
-        else:
-            positive_set_indxs = (SVM_train_labels == 1) & (
-                q_vals <= train_alpha)
-    negative_set_indxs = (SVM_train_labels == -1)
-
-    train_alpha = train_alpha_init
+    positive_set_indxs, negative_set_indxs = _get_pos_neg_sets(SVM_train_labels, train_alpha, mult, p)
 
     SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].reset_index(
         drop=True).copy()
@@ -483,7 +497,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         sys.stderr.write("iteration: %s.\n" % (iterate))
         #determining best direction with cross validation for parameter selection
         grid = train_cv(SVM_train_labels_iter, SVM_train_features_iter,
-                        folds=folds, Cs=Cs, kernel=kernel, degree=degree, alpha=train_alpha, p=p, mult=mult)
+                        folds=folds, alpha=train_alpha, p=p, mult=mult)
         best_train_power = max(grid.cv_results_['mean_test_score'])
         best_train_std = max(grid.cv_results_['std_test_score'])
         train_power[iterate] = best_train_power
@@ -500,42 +514,8 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         SVM_train_labels = SVM_train_labels.loc[new_idx].reset_index(drop=True)
 
         #determine the new positive and negative set
-        q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                               SVM_train_labels == 1, BC1=1, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
-
-        if top_positive and ('rank' in SVM_train_features.columns):
-            positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (train_df.SpecId.isin(
-                real_df.SpecId)) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
-        else:
-            positive_set_indxs = (SVM_train_labels == 1) & (
-                q_vals <= train_alpha) & (train_df.SpecId.isin(real_df.SpecId))
-        negative_set_indxs = (SVM_train_labels == -1)
-        
-        if sum(positive_set_indxs) == 0:
-            logging.info("No positive set: removing the +1 penalty.")
-            sys.stderr.write("No positive set: removing the +1 penalty.\n")
-            q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                                   SVM_train_labels == 1, BC1=0, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
-            if top_positive and ('rank' in SVM_train_features.columns):
-                positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (train_df.SpecId.isin(
-                    real_df.SpecId)) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
-            else:
-                positive_set_indxs = (SVM_train_labels == 1) & (
-                    q_vals <= train_alpha) & (train_df.SpecId.isin(real_df.SpecId))
-
-        while sum(positive_set_indxs) == 0:
-            train_alpha = train_alpha + 0.005
-            #getting initial positive and negative set
-            q_vals = uf.TDC_flex_c(SVM_train_labels == -1,
-                                   SVM_train_labels == 1, BC1=0, c=(mult*(1 - p) + 1)/(mult + 1), lam=(mult*(1 - p) + 1)/(mult + 1))
-            if top_positive and ('rank' in SVM_train_features.columns):
-                positive_set_indxs = (SVM_train_labels == 1) & (q_vals <= train_alpha) & (train_df.SpecId.isin(
-                    real_df.SpecId)) & (SVM_train_features['rank'] == min(SVM_train_features['rank']))
-            else:
-                positive_set_indxs = (SVM_train_labels == 1) & (
-                    q_vals <= train_alpha) & (train_df.SpecId.isin(real_df.SpecId))
-
-        train_alpha = train_alpha_init
+        #getting initial positive and negative set
+        positive_set_indxs, negative_set_indxs = _get_pos_neg_sets(SVM_train_labels, train_alpha, mult, p)
 
         SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].reset_index(
             drop=True).copy()
@@ -551,7 +531,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, Cs=[0.1, 1, 10], total_iter=5, p
         #get actual power if we were to stop here
         real_labels = real_df['Label'].copy()
         real_df_test = real_df.drop(
-            ['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
+            ['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins'], axis=1, errors='ignore').copy()
         
         if isinstance(remove, list):
             remove_list = [r for r in remove if r in SVM_train_features.columns]     

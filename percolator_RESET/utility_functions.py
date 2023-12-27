@@ -156,6 +156,7 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
         psms = [l.rstrip().split("\t", len(columns) - 1) for l in psms]
         psms = pd.DataFrame.from_records(psms, columns=columns)
         yield psms.apply(pd.to_numeric, errors="ignore")
+        
 #########################################################################################################
 
 
@@ -207,7 +208,7 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     targets["cluster"] = targets.groupby(
         'original_target_sequence', group_keys=False).condition.cumsum()
     
-    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge_temp', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
+    scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge_temp', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
     
     scaled_target.loc[:,:] = scale.transform(scaled_target)
     
@@ -246,7 +247,7 @@ def score_PSMs(target_decoys, scale, model, columns_trained):
 
     '''
 
-    scaled_target_decoys = target_decoys[target_decoys.columns[~(target_decoys.columns.isin(['SpecId', 'Label', 'filename', 'ScanNr', 'Peptide', 'Proteins']))]].copy()
+    scaled_target_decoys = target_decoys[target_decoys.columns[~(target_decoys.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins']))]].copy()
     
     scaled_target_decoys.loc[:,:] = scale.transform(scaled_target_decoys)
     

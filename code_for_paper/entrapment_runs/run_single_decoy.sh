@@ -12,7 +12,7 @@ section1() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -22,7 +22,7 @@ section1() {
         counter=0
        for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -40,7 +40,7 @@ section2() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -50,7 +50,7 @@ section2() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -68,7 +68,7 @@ section3() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -78,7 +78,7 @@ section3() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -95,7 +95,7 @@ section4() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "narrow_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/dcy_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done
@@ -105,7 +105,7 @@ section4() {
         counter=0
         for repeat in "${repeats[@]}"; do
             for value in "${values[@]}"; do 
-                python ../functions/do_FDR_percolator.py --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
+                python3 -m percolator_RESET --FDR_threshold 0.3 --overwrite T --seed "${counter}" --initial_dir TailorScore --score TailorScore --output_dir percolator_with_fdr_results --file_root "open_single_decoy_${size}_${counter}_ind_fix" "tide-search/${size}/open_top5_${size}_${value}.tide-search.pin" "tide-index/index-${size}-${value}/tide-index.peptides.txt"
                 counter=$((counter + 1))
             done
         done

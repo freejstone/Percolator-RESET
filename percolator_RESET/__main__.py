@@ -371,7 +371,7 @@ def main():
             #doing peptide level competition
             if pair:
                 df_all = pf.peptide_level(
-                    data_dfs[0].copy(), peptide_list_dfs[0].copy(), pair, initial_dir)
+                    data_dfs[0].copy(), peptide_list_dfs.copy(), pair, initial_dir)
             else:
                 df_all = pf.peptide_level(
                     data_dfs[0].copy(), None, pair, initial_dir)
@@ -451,8 +451,8 @@ def main():
     train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
 
     #do SVM
-    _, _, _, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds, Cs=[
-        0.1, 1, 10], p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove = remove, mult=mult, initial_dir=initial_dir)
+    _, _, _, df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds,
+            p=p_init, total_iter=total_iter, alpha=FDR_threshold, train_alpha=train_FDR_threshold, remove = remove, mult=mult, initial_dir=initial_dir)
 
     df_new = df_new.loc[(df_new.q_val <= FDR_threshold) | (df_new.Label == -1)]
     
