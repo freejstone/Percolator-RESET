@@ -486,7 +486,7 @@ def main():
         df_new['originally_discovered'] = True
         
         #indicate whether the auxliary PSMs reported are above the associated SVM score threshold
-        min_score = min(df_new.SVM_score)
+        min_score = min(df_new.loc[df_new.Label == 1, 'SVM_score'])
         df_extra['above_threshold'] = False
         df_extra.loc[df_extra.SVM_score >= min_score, 'above_threshold'] = True
         df_new['above_threshold'] = True
