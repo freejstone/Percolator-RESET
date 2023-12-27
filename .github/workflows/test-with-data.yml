@@ -15,7 +15,7 @@ jobs:
       - run: python3 -m pip install --upgrade pip numpy
       - run: curl -L -o data.zip 'https://www.dropbox.com/scl/fo/g7be8yqf6cbx6cexfgd3z/h?rlkey=bp89iq0mab48mwy75kwbliqtc&dl=0?dl=1'
       - run: sudo apt-get install unzip
-      - run: unzip data.zip -d data
+      - run: unzip data.zip -x / -d data
       - run: python3 functions/do_FDR_percolator.py --overwrite T --get_psms T --get_all_psms T --initial_dir TailorScore --seed 1 ./data/test1/narrow_50.make-pin.pin ./data/test1/tide-index.peptides.txt
       - run: python3 functions/do_FDR_percolator.py --overwrite T --pair F --seed 1 ./data/test1/narrow_50.make-pin.pin
       - run: python3 functions/do_FDR_percolator.py --overwrite T --dynamic_competition F --seed 1 ./data/test1/narrow_50.make-pin.pin
