@@ -35,7 +35,7 @@ def test_check_n_term():
 
 
 def test_comet_pairing():
-    search_file = './Percolator_RESET/tests/comet_open_top50.comet.pin'
+    search_file = './percolator_RESET/tests/comet_open_top50.comet.pin'
     data_df = uf.read_pin(search_file)
     #removing flanking aa
     data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
@@ -46,7 +46,7 @@ def test_comet_pairing():
     assert all(data_dfs[0].loc[data_dfs[0].Label == -1, 'Peptide'].isin(peptide_list_dfs[0].decoy))
 
 def test_average_score():
-    search_files = ['./Percolator_RESET/tests/narrow_50_sep.tide-search.target.pin', './Percolator_RESET/tests/narrow_51_sep.tide-search.target.pin']
+    search_files = ['./percolator_RESET/tests/narrow_50_sep.tide-search.target.pin', './percolator_RESET/tests/narrow_51_sep.tide-search.target.pin']
     data_dfs = []
     for search_file in search_files:
         data_df = uf.read_pin(search_file)
@@ -59,7 +59,7 @@ def test_average_score():
     assert data_dfs[0].TailorScore.to_list() == average_scores.to_list()
 
 def test_PSM_level():
-    search_files = ['./Percolator_RESET/tests/narrow_50_sep.tide-search.target.pin', './Percolator_RESET/tests/narrow_50_sep.tide-search.decoy.pin']
+    search_files = ['./percolator_RESET/tests/narrow_50_sep.tide-search.target.pin', './percolator_RESET/tests/narrow_50_sep.tide-search.decoy.pin']
     data_dfs = []
     for search_file in search_files:
         data_df = uf.read_pin(search_file)
@@ -72,7 +72,7 @@ def test_PSM_level():
     assert results.shape[0] == 1
     
 def test_peptide_level():
-    search_file = './Percolator_RESET/tests/comet_open_top50.comet2.pin'
+    search_file = './percolator_RESET/tests/comet_open_top50.comet2.pin'
     data_df = uf.read_pin(search_file)
     #removing flanking aa
     data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
@@ -82,7 +82,7 @@ def test_peptide_level():
     results = pf.peptide_level(data_dfs[0].copy(), peptide_list_dfs.copy(), True, 'lnExpect')
     assert results.shape[0] == 2
     
-    search_file = './Percolator_RESET/tests/comet_open_top50.comet2.pin'
+    search_file = './percolator_RESET/tests/comet_open_top50.comet2.pin'
     data_df = uf.read_pin(search_file)
     #removing flanking aa
     data_df['Peptide'] = data_df['Peptide'].str.extract(r'^[^.]*\.(.*?)\.[^.]*$', expand=False).fillna(data_df['Peptide'])
