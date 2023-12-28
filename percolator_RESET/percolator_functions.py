@@ -390,47 +390,63 @@ def _get_pos_neg_sets(SVM_train_labels, train_alpha, mult, p):
     negative_set_indxs = (SVM_train_labels == -1)
     
     return(positive_set_indxs, negative_set_indxs)
-    
-################################################################################################
+#########################################################################################################
 
 
-def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01, train_alpha=0.01, remove=None, mult=1, initial_dir='XCorr'):
+def _get_iter(SVM_train_features, SVM_train_labels, inds):
     '''
     
 
     Parameters
     ----------
-    df_all : Pandas dataframe
-        Search file with scaled features.
-    train_all : Pandas dataframe
-        Search file containing a subset of the Search file's decoy PSMs, scaled.
-    df_orig : Pandas dataframe
-        Search file with unscaled features.
-    folds : Int, optional
-        The number of folds for selection of class weights. The default is 3.
-    total_iter : Int, optional
-        Number of SVM training rounds. The default is 10.
-    p : Float, optional
-        The fraction of decoys randomly sampled from df_all that are in train_all. If more than one decoy
-        index used, this fraction is only taken with respect to the first decoy index. The default is 0.5.
-    alpha : Float, optional
-        FDR threshold. The default is 0.01.
-    train_alpha : Float, optional
-        Training FDR threshold for selection of positive training set. The default is 0.01.
-    remove : List, optional
-        A list of features to remove from training. The default is None.
-    top_positive : Bool, optional
-        Whether the top 1 PSM should be used for the positive set. The default is True.
-    mult : Int, optional
-         The number of decoy indices used. The default is 1.
+    SVM_train_features : Pandas dataframe
+        Features to be selected from to use in training
+    SVM_train_labels: Pandas series
+        Labels to be selected from to use in training
+    inds: Pandas series
+        Which labels to select
 
     Returns
     -------
-    Returns df_all, with the associated SVM scores, train_all with the associated SVM scores, and the learnt SVM model.
+    The training set.
 
     '''
-    train_alpha_init = train_alpha
+    
+    SVM_train_features_iter = SVM_train_features.loc[inds, :].reset_index(
+        drop=True).copy()
+    SVM_train_labels_iter = SVM_train_labels.loc[inds].reset_index(
+        drop=True).copy()
 
+    SVM_train_features_iter = SVM_train_features_iter.sample(frac=1)
+    SVM_train_labels_iter = SVM_train_labels_iter.loc[SVM_train_features_iter.index]
+
+    SVM_train_features_iter.reset_index(drop=True, inplace=True)
+    SVM_train_labels_iter.reset_index(drop=True, inplace=True)
+    
+    return(SVM_train_features_iter, SVM_train_labels_iter)
+        
+################################################################################################
+
+
+def _initialize_training(df_all, train_all, df_orig, p, train_alpha, mult, remove, initial_dir):
+    '''
+    
+
+    Parameters
+    ----------
+    SVM_train_features : Pandas dataframe
+        Features to be selected from to use in training
+    SVM_train_labels: Pandas series
+        Labels to be selected from to use in training
+    inds: Pandas series
+        Which labels to select
+
+    Returns
+    -------
+    The training set.
+
+    '''
+    
     # ensure the indices of train_all belong to df_all
     train_targets = df_all[~(df_all.index.isin(train_all.index))].copy()
     train_targets.loc[:, 'Label'] = 1
@@ -472,23 +488,55 @@ def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01,
 
     columns_trained = SVM_train_features.columns
 
+    return(SVM_train_features, SVM_train_labels, real_df, df_orig, columns_trained)
+        
+################################################################################################
+
+
+def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01, train_alpha=0.01, remove=None, mult=1, initial_dir='XCorr'):
+    '''
+    
+
+    Parameters
+    ----------
+    df_all : Pandas dataframe
+        Search file with scaled features.
+    train_all : Pandas dataframe
+        Search file containing a subset of the Search file's decoy PSMs, scaled.
+    df_orig : Pandas dataframe
+        Search file with unscaled features.
+    folds : Int, optional
+        The number of folds for selection of class weights. The default is 3.
+    total_iter : Int, optional
+        Number of SVM training rounds. The default is 10.
+    p : Float, optional
+        The fraction of decoys randomly sampled from df_all that are in train_all. If more than one decoy
+        index used, this fraction is only taken with respect to the first decoy index. The default is 0.5.
+    alpha : Float, optional
+        FDR threshold. The default is 0.01.
+    train_alpha : Float, optional
+        Training FDR threshold for selection of positive training set. The default is 0.01.
+    remove : List, optional
+        A list of features to remove from training. The default is None.
+    top_positive : Bool, optional
+        Whether the top 1 PSM should be used for the positive set. The default is True.
+    mult : Int, optional
+         The number of decoy indices used. The default is 1.
+
+    Returns
+    -------
+    Returns df_all, with the associated SVM scores, train_all with the associated SVM scores, and the learnt SVM model.
+
+    '''
+    #preprocess
+    SVM_train_features, SVM_train_labels, real_df, df_orig, columns_trained = _initialize_training(df_all, train_all, df_orig, p, train_alpha, mult, remove, initial_dir)
+    
     #getting initial positive and negative set
     positive_set_indxs, negative_set_indxs = _get_pos_neg_sets(SVM_train_labels, train_alpha, mult, p)
-
-    SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].reset_index(
-        drop=True).copy()
-    SVM_train_labels_iter = SVM_train_labels.loc[positive_set_indxs | negative_set_indxs].reset_index(
-        drop=True).copy()
-
-    SVM_train_features_iter = SVM_train_features_iter.sample(frac=1)
-    SVM_train_labels_iter = SVM_train_labels_iter.loc[SVM_train_features_iter.index]
-
-    SVM_train_features_iter.reset_index(drop=True, inplace=True)
-    SVM_train_labels_iter.reset_index(drop=True, inplace=True)
-
-    train_power, train_std, true_power = [
-        0]*total_iter, [0]*total_iter, [0]*total_iter
-
+    
+    #get iterative training dataframes
+    SVM_train_features_iter, SVM_train_labels_iter = _get_iter(SVM_train_features, SVM_train_labels, positive_set_indxs | negative_set_indxs)
+    
     logging.info("Conducting iterative SVM.")
     sys.stderr.write("Conducting iterative SVM.\n")
 
@@ -500,8 +548,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01,
                         folds=folds, alpha=train_alpha, p=p, mult=mult)
         best_train_power = max(grid.cv_results_['mean_test_score'])
         best_train_std = max(grid.cv_results_['std_test_score'])
-        train_power[iterate] = best_train_power
-        train_std[iterate] = best_train_std
+     
 
         #the new direction
         new_scores = grid.decision_function(SVM_train_features)
@@ -516,17 +563,8 @@ def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01,
         #determine the new positive and negative set
         #getting initial positive and negative set
         positive_set_indxs, negative_set_indxs = _get_pos_neg_sets(SVM_train_labels, train_alpha, mult, p)
-
-        SVM_train_features_iter = SVM_train_features.loc[positive_set_indxs | negative_set_indxs, :].reset_index(
-            drop=True).copy()
-        SVM_train_labels_iter = SVM_train_labels.loc[positive_set_indxs | negative_set_indxs].reset_index(
-            drop=True).copy()
-
-        SVM_train_features_iter = SVM_train_features_iter.sample(frac=1)
-        SVM_train_labels_iter = SVM_train_labels_iter.loc[SVM_train_features_iter.index]
-
-        SVM_train_features_iter.reset_index(drop=True, inplace=True)
-        SVM_train_labels_iter.reset_index(drop=True, inplace=True)
+            
+        SVM_train_features_iter, SVM_train_labels_iter = _get_iter(SVM_train_features, SVM_train_labels, positive_set_indxs | negative_set_indxs)
 
         #get actual power if we were to stop here
         real_labels = real_df['Label'].copy()
@@ -549,7 +587,6 @@ def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01,
         q_val = uf.TDC_flex_c(
             new_labels == -1, new_labels == 1, c=1/(mult*(1 - p) + 1), lam=1/(mult*(1 - p) + 1))
         power_final = sum((q_val <= alpha) & (new_labels == 1))
-        true_power[iterate] = power_final
 
         logging.info("Observed power: %s." % (power_final))
         sys.stderr.write("Observed power: %s.\n" % (power_final))
@@ -586,7 +623,7 @@ def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01,
 
     train_all['SVM_score'] = new_scores
 
-    return(train_power, train_std, true_power, df_orig, train_all, grid, columns_trained)
+    return(df_orig, train_all, grid, columns_trained)
 
 
 ################################################################################################

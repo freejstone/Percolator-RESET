@@ -12,7 +12,8 @@ jobs:
           python-version: '3.11'
       - run: python3 -m pip install --upgrade pip pandas
       - run: python3 -m pip install --upgrade pip scikit-learn
-      - run: python3 -m pip install --upgrade pip numpy
+      - run: python3 -m pip install --upgrade pip 
+      - run: python3 -m pip install --upgrade pip pytest
       - run: curl -L -o data.zip 'https://www.dropbox.com/scl/fo/g7be8yqf6cbx6cexfgd3z/h?rlkey=bp89iq0mab48mwy75kwbliqtc&dl=0?dl=1'
       - run: sudo apt-get install unzip
       - run: unzip data.zip -x / -d data
@@ -23,3 +24,4 @@ jobs:
       - run: python3 -m percolator_RESET --seed 0 --FDR_threshold 0.3 --overwrite T  ./data/test2/narrow_50_sep.tide-search.target.pin,./data/test2/narrow_51_sep.tide-search.target.pin,./data/test2/narrow_50_sep.tide-search.decoy.pin,./data/test2/narrow_51_sep.tide-search.decoy.pin ./data/test2/tide-index-0.peptides.txt,./data/test2/tide-index-1.peptides.txt
       - run: python3 -m percolator_RESET --seed 0 --pair F --FDR_threshold 0.3 --overwrite T  ./data/test2/narrow_50_sep.tide-search.target.pin,./data/test2/narrow_51_sep.tide-search.target.pin,./data/test2/narrow_50_sep.tide-search.decoy.pin,./data/test2/narrow_51_sep.tide-search.decoy.pin 
       - run: python3 -m percolator_RESET --seed 0 --reverse T --overwrite T  ./data/test4/comet_open_top50.comet.pin
+      - run: python3 -m pytest ./percolator_RESET/tests/
