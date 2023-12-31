@@ -16,7 +16,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_single_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_single_decoy_', size, '_', d, '_ind_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -31,7 +31,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_open_entrapments_ind.csv')
+write.csv(df_all, 'results/percolator_with_fdr_open_entrapments_ind_fix.csv')
 ####################################################################################
 
 #percolator with fdr entrapments
@@ -52,7 +52,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_single_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_single_decoy_', size, '_', d, '_ind_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -67,7 +67,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments_ind.csv')
+write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments_ind_fix.csv')
 ####################################################################################
 
 
@@ -91,7 +91,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_extra_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_extra_decoy_', size, '_', d, '_ind_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -106,7 +106,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments_ind.csv')
+write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments_ind_fix.csv')
 ####################################################################################
 
 #percolator with fdr entrapments
@@ -127,7 +127,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_extra_decoy_', size, '_', d, '_ind.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_extra_decoy_', size, '_', d, '_ind_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -142,7 +142,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_narrow_extra_entrapments_ind.csv')
+write.csv(df_all, 'results/percolator_with_fdr_narrow_extra_entrapments_ind_fix.csv')
 ####################################################################################
 
 
@@ -163,7 +163,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_single_decoy_', size, '_', d, '_no_pair.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_single_decoy_', size, '_', d, '_no_pair_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -178,7 +178,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_open_entrapments_no_pair.csv')
+write.csv(df_all, 'results/percolator_with_fdr_open_entrapments_no_pair_fix.csv')
 ####################################################################################
 
 #percolator with fdr entrapments
@@ -199,7 +199,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_single_decoy_', size, '_', d, '_no_pair.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_single_decoy_', size, '_', d, '_no_pair_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -214,7 +214,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments_no_pair.csv')
+write.csv(df_all, 'results/percolator_with_fdr_narrow_entrapments_no_pair_fix.csv')
 ####################################################################################
 
 
@@ -238,7 +238,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_extra_decoy_', size, '_', d, '_no_pair.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'open_extra_decoy_', size, '_', d, '_no_pair_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -253,7 +253,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments_no_pair.csv')
+write.csv(df_all, 'results/percolator_with_fdr_open_extra_entrapments_no_pair_fix.csv')
 ####################################################################################
 
 #percolator with fdr entrapments
@@ -274,7 +274,7 @@ df_all = data.frame(Threshold = numeric(),
 for (size in sizes) {
   for (d in d_vec) {
     print(d)
-    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_extra_decoy_', size, '_', d, '_no_pair.peptides.txt', sep = ''))
+    CONGA_df = read.delim(paste('percolator_with_fdr_results/', 'narrow_extra_decoy_', size, '_', d, '_no_pair_fix.peptides.txt', sep = ''))
     CONGA_df = CONGA_df[CONGA_df$Label == 1, ]
     for (alpha in alpha_vec) {
       power = sum(CONGA_df$q_val <= alpha)
@@ -289,7 +289,7 @@ for (size in sizes) {
   }
 }
 
-write.csv(df_all, 'results/percolator_with_fdr_narrow_extra_entrapments_no_pair.csv')
+write.csv(df_all, 'results/percolator_with_fdr_narrow_extra_entrapments_no_pair_fix.csv')
 ####################################################################################
 
 
