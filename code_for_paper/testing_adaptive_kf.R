@@ -4,7 +4,9 @@
 library(adaptiveKnockoff)
 library(randomForest)
 library(tidyverse)
+library(gam)
 source("filter_RF.R")
+source("filter_EM.R")
 
 #seed
 set.seed(1012024)
@@ -22,7 +24,7 @@ df$original_target_sequence[df$Label == -1] = peptide_list$target[match(df$origi
 df = df[duplicated(df$original_target_sequence), ]
 
 W = df$TailorScore*(df$Label)
-z = df %>% select('deltLCn', 'deltCn', 'XCorr', 'TailorScore', 'PepLen', 'lnNumDSP', 'dM', 'absdM') #removed charge since adaptiveKF requires numeric side-info
+z = df %>% select('deltLCn', 'deltCn', 'XCorr', 'PepLen', 'lnNumDSP', 'dM', 'absdM') #removed charge since adaptiveKF requires numeric side-info
 z = as.matrix(z)
 
 props = (1:9)/10
@@ -35,6 +37,23 @@ for (i in 1:length(props)) {
 
 mean_time = mean(results)
 
+print('Time for RF:')
+print(paste('average time in minutes:', mean_time*nrow(df)*0.9))
+print(paste('sd time in minutes:', sd(results)*nrow(df)*0.9))
+
+W = df$TailorScore
+W = W - min(W)
+W = W*(df$Label)
+results = rep(0, length(props))
+for (i in 1:length(props)) {
+  print(i)
+  result = filter_EM(W, z, reveal_prop = props[i], mute = FALSE)
+  results[i] = result
+}
+
+mean_time = mean(results)
+
+print('Time for EM:')
 print(paste('average time in minutes:', mean_time*nrow(df)*0.9))
 print(paste('sd time in minutes:', sd(results)*nrow(df)*0.9))
 
