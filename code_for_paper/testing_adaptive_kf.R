@@ -24,7 +24,7 @@ df$original_target_sequence[df$Label == -1] = peptide_list$target[match(df$origi
 df = df[duplicated(df$original_target_sequence), ]
 
 W = df$TailorScore*(df$Label)
-z = df %>% select('deltLCn', 'deltCn', 'XCorr', 'PepLen', 'lnNumDSP', 'dM', 'absdM') #removed charge since adaptiveKF requires numeric side-info
+z = df %>% select('deltLCn', 'deltCn', 'Charge1', 'Charge2', 'Charge3', 'Charge4', 'Charge5',  'XCorr', 'PepLen', 'lnNumDSP', 'dM', 'absdM')
 z = as.matrix(z)
 
 props = (1:9)/10
