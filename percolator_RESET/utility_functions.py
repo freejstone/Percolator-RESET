@@ -423,7 +423,10 @@ def report_psms(df_new, PSMs, get_psms, dynamic_competition, scale, model, isola
         df_final = pd.concat([df_new, df_extra])
     
         # remove duplicate values from df_extra
-        df_final = df_final.drop_duplicates(['SpecId', 'filename', 'Peptide'])
+        if any(df_final.columns.str.contains('filename')):
+            df_final = df_final.drop_duplicates(['SpecId', 'filename', 'Peptide'])
+        else:
+            df_final = df_final.drop_duplicates(['SpecId', 'Peptide'])
         
         # write output
         df_final[df_final.Label == 1].to_csv(output_dir + "/" + file_root +
