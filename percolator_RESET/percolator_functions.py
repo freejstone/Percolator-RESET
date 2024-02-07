@@ -18,6 +18,7 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
+import warnings
 ################################################################################
 
 
@@ -544,11 +545,18 @@ def do_svm(df_all, train_all, df_orig, folds=3, total_iter=5, p=0.5, alpha=0.01,
         logging.info("iteration: %s." % (iterate))
         sys.stderr.write("iteration: %s.\n" % (iterate))
         #determining best direction with cross validation for parameter selection
-        grid = train_cv(SVM_train_labels_iter, SVM_train_features_iter,
-                        folds=folds, alpha=train_alpha, p=p, mult=mult)
+        
+        warnings.filterwarnings("error") #to catch warnings associated with SVM training
+        try:
+            grid = train_cv(SVM_train_labels_iter, SVM_train_features_iter,
+                            folds=folds, alpha=train_alpha, p=p, mult=mult)
+        except Exception as e: 
+            sys.exit("ERROR: The following error occured during SVM training: %s" %(str(e)))
+        warnings.resetwarnings() #to reset warnings so they are not always errors
+        
         best_train_power = max(grid.cv_results_['mean_test_score'])
         best_train_std = max(grid.cv_results_['std_test_score'])
-     
+        
 
         #the new direction
         new_scores = grid.decision_function(SVM_train_features)

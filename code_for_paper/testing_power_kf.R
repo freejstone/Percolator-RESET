@@ -48,8 +48,8 @@ for (i in 1:length(props)) {
   result = filter_EM(W, z, reveal_prop = props[i], mute = FALSE)
   results[i] = result
 }
-
-mean_time = mean(results)
+relevant = floor((nrow(df) - reset)/nrow(df)*10)
+mean_time = mean(results[1:relevant])
 
 print('Time for EM:')
 print(paste('average time in minutes:', mean_time*(nrow(df)*0.9 - reset) ))

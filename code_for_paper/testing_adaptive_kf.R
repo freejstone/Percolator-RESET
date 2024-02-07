@@ -46,6 +46,9 @@ targets = sum(target_peps$SVM_score >= min_score)
 decoys = sum(decoy_peps$SVM_score >= min_score)
 reset = targets + decoys
 
+relevant = floor((nrow(df) - reset)/nrow(df)*10)
+relevant >= 9 
+
 print('Time for RF:')
 print(paste('average time in minutes:', mean_time*(nrow(df)*0.9 - reset) ))
 print(paste('sd time in minutes:', sd(results)*(nrow(df)*0.9 - reset) ))
