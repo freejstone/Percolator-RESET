@@ -337,12 +337,14 @@ def do_scale(df_all, df_extra=None):
     '''
     #scale non-binary features
     scale = StandardScaler()
+    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))].astype('float64')
     df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
         df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
 
     if df_extra is None:
         return(df_all, scale)
     else:
+        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))].astype('float64')
         df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
             df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
         return(df_all, scale, df_extra)
