@@ -280,7 +280,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
                           class_weight=class_weight)
 
     my_scorer = make_scorer(custom_accuracy, alpha=alpha, p=p, mult=mult,
-                            greater_is_better=True, response_method=None)
+                            greater_is_better=True, response_method=("decision_function", "predict_proba"))
 
     if kernel == 'linear':
         grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),dual=True), param_grid=param_grid,
@@ -291,7 +291,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
     grid.fit(df, labels)
     if max(grid.cv_results_['mean_test_score']) == 0:
         my_scorer = make_scorer(custom_accuracy, alpha=alpha, p=p, mult=mult, BC1=0,
-                                greater_is_better=True, response_method=None)
+                                greater_is_better=True, response_method=("decision_function", "predict_proba"))
 
         if kernel == 'linear':
             grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),dual=True), param_grid=param_grid,
@@ -304,7 +304,7 @@ def train_cv(labels, df, folds=3, Cs=[0.1, 1, 10], kernel='linear', degree=2, al
     while max(grid.cv_results_['mean_test_score']) == 0:
         alpha = alpha + 0.005
         my_scorer = make_scorer(custom_accuracy, alpha=alpha, BC1=0,
-                                greater_is_better=True, response_method=None)
+                                greater_is_better=True, response_method=("decision_function", "predict_proba"))
 
         if kernel == 'linear':
             grid = GridSearchCV(svm.LinearSVC(max_iter=int(1e7),dual=True), param_grid=param_grid,
@@ -337,12 +337,14 @@ def do_scale(df_all, df_extra=None):
     '''
     #scale non-binary features
     scale = StandardScaler()
+    df_all = df_all.astype('object')
     df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
         df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
 
     if df_extra is None:
         return(df_all, scale)
     else:
+        df_extra = df_extra.astype('object')
         df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
             df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
         return(df_all, scale, df_extra)
