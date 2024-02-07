@@ -7,3 +7,5 @@ This repository contains the code for the associated manuscript, titled "[How to
 The important folder is *percolator_RESET* which contains the actual scripts that implements our procedure using Python, from the command line. This python implementation may be used as interim until the development in C (Percolator). For further details on implementation, see the wiki page.
 
 For installation, download the latest release from Github, and install using pip in the same directory as setup.py using `pip install .`
+
+See the [wiki](https://github.com/freejstone/Percolator-RESET/wiki) page on how to use Percolator RESET.
