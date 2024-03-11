@@ -335,16 +335,31 @@ def do_scale(df_all, df_extra=None):
     Scales the features in df_all for SVM training. Applies the same transformation to df_extra.
 
     '''
+    
+    constant_cols = ['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']
+    
+    #converting dtypes
+    colnames = df_all.columns
+    for column in colnames:
+        if column not in constant_cols:
+            df_all[column] = df_all[column].astype('float64')
+    
     #scale non-binary features
     scale = StandardScaler()
-    df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.fit_transform(
-        df_all.loc[:, ~(df_all.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+    df_all.loc[:, ~(df_all.columns.isin(constant_cols))] = scale.fit_transform(
+        df_all.loc[:, ~(df_all.columns.isin(constant_cols))])
 
     if df_extra is None:
         return(df_all, scale)
     else:
-        df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))] = scale.transform(
-            df_extra.loc[:, ~(df_extra.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained']))])
+        
+        colnames = df_extra.columns
+        for column in colnames:
+            if column not in constant_cols:
+                df_extra[column] = df_extra[column].astype('float64')
+        
+        df_extra.loc[:, ~(df_extra.columns.isin(constant_cols))] = scale.transform(
+            df_extra.loc[:, ~(df_extra.columns.isin(constant_cols))])
         return(df_all, scale, df_extra)
 #########################################################################################################
 

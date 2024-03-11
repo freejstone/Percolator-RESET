@@ -149,6 +149,8 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
     pandas.DataFrame
         The chunk of PSMs
     """
+    constant_cols = ['SpecId', 'filename', 'Peptide', 'Proteins']
+    
     while True:
         psms = file_obj.readlines(chunk_size)
         if not psms:
@@ -156,7 +158,15 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
 
         psms = [l.rstrip().split("\t", len(columns) - 1) for l in psms]
         psms = pd.DataFrame.from_records(psms, columns=columns)
-        yield psms.apply(pd.to_numeric, errors="ignore")
+        
+        for column in columns:
+            if column not in constant_cols:
+                psms[column] = pd.to_numeric(psms[column]) #errors = 'ignore' is not allowed to be captured anymore!
+        #psms = psms.apply(pd.to_numeric, errors="ignore")
+        
+        sys.stderr.write(psms.dtypes.to_string())
+        
+        yield psms
         
 #########################################################################################################
 
