@@ -164,7 +164,7 @@ def _parse_in_chunks(file_obj, columns, chunk_size=int(1e8)):
                 psms[column] = pd.to_numeric(psms[column]) #errors = 'ignore' is not allowed to be captured anymore!
         #psms = psms.apply(pd.to_numeric, errors="ignore")
         
-        sys.stderr.write(psms.dtypes.to_string())
+        #sys.stderr.write(psms.dtypes.to_string())
         
         yield psms
         
@@ -213,13 +213,15 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     targets = targets.sort_values(
         by='ExpMass', ascending=True).reset_index(drop=True)
     targets["mass_plus"] = targets.groupby('original_target_sequence', group_keys=False).apply(
-        lambda x: x.ExpMass.shift(1) + np.maximum(isolation_window[0]*x.charge_temp, isolation_window[1]*x.charge_temp.shift(1)))
+        lambda x: x.ExpMass.shift(1) + np.maximum(isolation_window[0]*x.charge_temp, isolation_window[1]*x.charge_temp.shift(1)), include_groups = False)
     targets.loc[targets["mass_plus"].isna(), "mass_plus"] = -np.Inf
     targets["condition"] = targets["ExpMass"] > targets["mass_plus"]
     targets["cluster"] = targets.groupby(
         'original_target_sequence', group_keys=False).condition.cumsum()
     
     scaled_target = targets[targets.columns[~(targets.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins', 'trained', 'charge_temp', 'condition', 'mass_plus', 'cluster', 'original_target_sequence']))]].copy()
+    
+    scaled_target = scaled_target.astype('float64')
     
     scaled_target.loc[:,:] = scale.transform(scaled_target)
     
@@ -259,6 +261,8 @@ def score_PSMs(target_decoys, scale, model, columns_trained):
     '''
 
     scaled_target_decoys = target_decoys[target_decoys.columns[~(target_decoys.columns.isin(['SpecId', 'Label', 'filename', 'fileindx', 'ScanNr', 'Peptide', 'Proteins']))]].copy()
+    
+    scaled_target_decoys = scaled_target_decoys.astype('float64')
     
     scaled_target_decoys.loc[:,:] = scale.transform(scaled_target_decoys)
     
