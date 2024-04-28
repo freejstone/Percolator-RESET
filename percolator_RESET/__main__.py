@@ -354,6 +354,12 @@ def main():
     train_all_unscale = df_all.loc[(df_all['Label']
                                   == -1)].copy()
     train_all_unscale = train_all_unscale.loc[rand_indxs].copy()
+    
+    #report number of target and decoy peptides
+    sys.stderr.write("There are %s target peptides. \n" %(sum(df_all.Label == 1)))
+    logging.info("There are %s target peptides." %(sum(df_all.Label == 1)))
+    sys.stderr.write("There are %s decoy peptides. \n" %(sum(df_all.Label == -1)))
+    logging.info("There are %s decoy peptides." %(sum(df_all.Label == -1)))
 
     #do SVM
     df_new, train_all_new, model, columns_trained = pf.do_svm(df_all_scale.copy(), train_all.copy(), df_all.copy(), folds=folds,
