@@ -477,8 +477,12 @@ def _initialize_training(df_all, train_all, df_orig, p, train_alpha, mult, remov
     else:
         sys.exit("--initial_dir %s not detected. \n" %(initial_dir))
     
-    train_df = train_df.sort_values(
-        by=initial_dir_case_insensitive, ascending=False).reset_index(drop=True)
+    if 'evalue' in initial_dir_case_insensitive: #quick fix for now
+        train_df = train_df.sort_values(
+            by=initial_dir_case_insensitive, ascending=True).reset_index(drop=True)
+    else:
+        train_df = train_df.sort_values(
+            by=initial_dir_case_insensitive, ascending=False).reset_index(drop=True)
         
     #real df
     real_df = df_all[~(df_all.index.isin(train_all.index))
