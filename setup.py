@@ -25,7 +25,7 @@ setuptools.setup(
     python_requires='>=3.9, <=3.11',
     install_requires=[
         'pandas',
-        'numpy',
+        'numpy<=1.26.4',
         'scikit-learn>=1.4'
     ],
 )
