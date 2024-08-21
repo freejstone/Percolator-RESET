@@ -10,6 +10,10 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - run: python3 -m pip install --upgrade pip pandas
+      - run: python3 -m pip install --upgrade pip scikit-learn
+      - run: python3 -m pip install --upgrade pip 
+      - run: python3 -m pip install --upgrade numpy==1.23.4
       - run: python3 -m pip install --upgrade pip pytest
       - run: curl -L -o data.zip 'https://www.dropbox.com/scl/fo/g7be8yqf6cbx6cexfgd3z/h?rlkey=bp89iq0mab48mwy75kwbliqtc&dl=0?dl=1'
       - run: sudo apt-get install unzip
