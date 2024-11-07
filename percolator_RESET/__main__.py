@@ -119,6 +119,7 @@ def main():
     dynamic_competition = True
     mult = None
     reverse= False
+    stem_mod = False
     command_line = ' '.join(sys.argv)
 
     # Parse the command line.
@@ -230,6 +231,14 @@ def main():
         elif (next_arg == '--mult'):
             mult = int(sys.argv[0])
             sys.argv = sys.argv[1:]
+        elif (next_arg == '--stem_mod'):
+            if str(sys.argv[0]) in ['t', 'T', 'true', 'True']:
+                reverse = True
+            elif str(sys.argv[0]) in ['f', 'F', 'false', 'False']:
+                reverse = False
+            else:
+                sys.stderr.write("Invalid argument for --stem_mod")
+                sys.exit(1)
         else:
             sys.stderr.write("Invalid option (%s)" % next_arg)
             sys.exit(1)
@@ -324,11 +333,17 @@ def main():
         
     if dynamic_competition:
         #doing multi peptide level competition
-        if pair:
+        if pair and not stem_mod:
             df_all = pf.peptide_level(
                 data_df.copy(), peptide_list_dfs.copy(), pair, initial_dir)
-        else:
+        elif pair and stem_mod:
+            df_all = pf.stem_mod_level(
+                data_df.copy(), peptide_list_dfs.copy(), pair, initial_dir)
+        elif not pair and not stem_mod:
             df_all = pf.peptide_level(
+                data_df.copy(), None, pair, initial_dir)
+        else:
+            df_all = pf.stem_mod_level(
                 data_df.copy(), None, pair, initial_dir)
     
     PSMs = data_df.copy()
@@ -383,16 +398,20 @@ def main():
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
     
-    #report PSMs using clustering algorithm
-    uf.report_psms(df_new, PSMs, get_psms, dynamic_competition, scale, model, isolation_window, columns_trained, initial_dir, output_dir, file_root)
-    #report all PSMs
-    uf.report_all_psms(PSMs, get_all_psms, scale, model, columns_trained, output_dir, file_root)
     #report discovered peptides
     df_new[df_new.Label == 1].to_csv(output_dir + "/" + file_root +
                                          ".peptides.txt", header=True, index=False, sep='\t')
-    #report decoys
-    uf.report_decoys(df_new, train_all_unscale, train_all_new, report_decoys, output_dir, file_root)
     
+    #quick fix to get around empty discovery list....
+    if df_new.shape[0] > 0:
+        #report PSMs using clustering algorithm
+        uf.report_psms(df_new, PSMs, get_psms, dynamic_competition, scale, model, isolation_window, columns_trained, initial_dir, output_dir, file_root)
+        #report all PSMs
+        uf.report_all_psms(PSMs, get_all_psms, scale, model, columns_trained, output_dir, file_root)
+       
+        #report decoys
+        uf.report_decoys(df_new, train_all_unscale, train_all_new, report_decoys, output_dir, file_root)
+        
     end_time = time.time()
 
     logging.info("Elapsed time: " +

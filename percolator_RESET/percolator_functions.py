@@ -10,6 +10,7 @@ super_percolator main functions
 
 import numpy as np
 import pandas as pd
+import re
 from percolator_RESET import utility_functions as uf
 import logging
 import sys
@@ -206,6 +207,64 @@ def peptide_level(df_all, peptide_list_df, pair, initial_dir):
         
 
     df_all.drop(['original_target', 'sorted_Peptide', 'id', 'rank'], axis=1, inplace=True, errors='ignore')
+    return(df_all)
+#########################################################################################################
+
+
+def stem_mod_level(df_all, peptide_list_df, pair, initial_dir):
+    '''
+
+    Parameters
+    ----------
+    df_all : Pandas Dataframe
+        Concatenated search file.
+    peptide_list_df : Pandas Dataframe
+        Tide-index target-decoy peptide pairs.
+    initial_dir : To determine the best scoring peptide
+    
+    Returns
+    -------
+    PSMs that remain after target-decoy peptide level competition.
+
+    '''
+    
+    df_all = _get_best_peps(df_all, initial_dir)
+
+    sys.stderr.write("Doing peptide-stem level competition. \n")
+    logging.info("Doing peptide-stem level competition.")
+    
+    if not any(df_all.columns.str.contains('fileindx')):
+        df_all['fileindx'] = 0
+    
+    df_all['original_target'] = df_all['Peptide']
+    if pair:
+        for i in range(len(peptide_list_df)):
+            df_all_sub = df_all[(df_all.Label == -1) &
+                                (df_all.fileindx == i)].copy()
+            peptide_list_df[i].rename(
+                columns={'target': 'original_target', 'decoy': 'Peptide'}, inplace=True)
+            df_all_sub = df_all_sub.merge(
+                peptide_list_df[i][['original_target', 'Peptide']], how='left', on='Peptide')
+            
+            if any(df_all_sub.original_target_y.isna()):
+                sys.exit("Some peptides in the search file do not have a pair in the peptide list. E.g. %s \n" %(df_all_sub.Peptide[df_all_sub.original_target_y.isna()].values[0])) 
+                
+            df_all.loc[(df_all.Label == -1) & (df_all.fileindx == i),
+                       'original_target'] = df_all_sub['original_target_y'].tolist()
+    
+    def extract_modifications(target):
+        mods = re.findall(r'\[(\d+\.?\d*)\]', target)
+        mods_sorted = sorted(mods, key=float)
+        return ''.join([f'[{mod}]' for mod in mods_sorted])
+    
+    df_all['modifications'] = df_all['original_target'].apply(extract_modifications)
+    
+    df_all['original_target'] = df_all['original_target'].str.replace(
+        "\\[|\\]|\\.|\\d+", "", regex=True)
+    df_all = df_all.drop_duplicates(subset=['original_target','modifications'])
+        
+
+    df_all.drop(['original_target', 'sorted_Peptide', 'id', 'rank', 'modifications'], axis=1, inplace=True, errors='ignore')
     return(df_all)
 #########################################################################################################
 

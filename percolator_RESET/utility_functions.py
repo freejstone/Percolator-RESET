@@ -212,8 +212,9 @@ def create_cluster(target_decoys, scale, original_discoveries, model, isolation_
     #clustering the PSMs matched to the same peptide according to mass
     targets = targets.sort_values(
         by='ExpMass', ascending=True).reset_index(drop=True)
-    targets["mass_plus"] = targets.groupby('original_target_sequence', group_keys=False).apply(
-        lambda x: x.ExpMass.shift(1) + np.maximum(isolation_window[0]*x.charge_temp, isolation_window[1]*x.charge_temp.shift(1)), include_groups = False)
+    mass_plus = targets.groupby('original_target_sequence', group_keys=False).apply(
+        lambda x: x.ExpMass.shift(1) + np.maximum(isolation_window[0]*x.charge_temp, isolation_window[1]*x.charge_temp.shift(1)))
+    targets["mass_plus"] = mass_plus
     targets.loc[targets["mass_plus"].isna(), "mass_plus"] = -np.Inf
     targets["condition"] = targets["ExpMass"] > targets["mass_plus"]
     targets["cluster"] = targets.groupby(
