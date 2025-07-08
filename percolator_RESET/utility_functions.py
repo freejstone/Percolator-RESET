@@ -126,6 +126,8 @@ def read_pin(perc_file):
             _ = perc.readline()
 
         psms = pd.concat((c for c in _parse_in_chunks(perc, cols)), copy=False)
+	
+    psms.reset_index(drop=True, inplace=True)
 
     return psms
 #########################################################################################################
