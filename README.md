@@ -4,7 +4,7 @@ Percolator RESET (REScoring via Estimating and Training) is a post-processor use
 
 This repository contains the code for the associated manuscript, titled "[How to train a post-processor for tandem mass spectrometry proteomics database search while maintaining control of the false discovery rate](https://pubs.acs.org/doi/10.1021/acs.jproteome.4c00742)". 
 
-The important folder is *percolator_RESET* which contains the actual scripts that implements our procedure using Python, from the command line. This python implementation may be used as interim until the development in C (Percolator). For further details on implementation, see the wiki page.
+The important folder is *percolator_RESET* which contains the actual scripts that implements our procedure using Python, from the command line. For further details on implementation, see the wiki page. The Percolator software now supports [Percolator RESET](https://github.com/percolator/percolator/pull/384). 
 
 For installation, download the latest release from Github, and install using pip in the same directory as setup.py using `pip install .`
 
